@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # =============================================================================
-#  WebShield Scanner — Flask Web Sunucusu
+#  WebShield Scanner — Flask Web Sunucusu (Canlı Sunucu & Güvenlik Optimizasyonlu)
 #  Görev: scanner.py'deki güvenlik testlerini web arayüzüne bağlar.
-#  Çalıştırmak için: python app.py
-#  Tarayıcıda aç  : http://localhost:5000
 # =============================================================================
 
 from flask import Flask, render_template, request, jsonify, Response, send_from_directory, abort
@@ -12,9 +10,19 @@ import json
 import os
 import queue
 import time
+import socket
+import ipaddress
 from datetime import datetime
 from urllib.parse import urlparse
 from dotenv import load_dotenv
+
+# Güvenli XML Parse için (DoS / XML Bombası koruması)
+import defusedxml.ElementTree as ET
+import urllib.request
+import re
+
+# Sunucu çökmesini engellemek için Thread Limitleme (Maksimum eşzamanlı tarama)
+from concurrent.futures import ThreadPoolExecutor
 
 # ── .env dosyasını yükle ──────────────────────────────────────────────────────
 load_dotenv()
@@ -34,28 +42,18 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+# ── Thread Havuzu (Aynı anda maksimum 3 kişi tarama yapabilir) ───────────────
+executor = ThreadPoolExecutor(max_workers=3)
+
 # ── Ortam değişkenleri ────────────────────────────────────────────────────────
 API_KEY       = os.environ.get("WEBSHIELD_API_KEY", "")   # Boşsa auth devre dışı
 REQUIRE_AUTH  = os.environ.get("REQUIRE_AUTH", "false").lower() == "true"
 
-# ── SSRF Koruması: İç ağ adresleri engellenir ─────────────────────────────────
-BLOCKED_HOSTS = [
-    "localhost", "127.", "0.0.0.0",
-    "169.254.",           # Link-local
-    "10.",                # RFC1918
-    "172.16.", "172.17.", "172.18.", "172.19.",
-    "172.20.", "172.21.", "172.22.", "172.23.",
-    "172.24.", "172.25.", "172.26.", "172.27.",
-    "172.28.", "172.29.", "172.30.", "172.31.",
-    "192.168.",           # RFC1918
-    "::1", "fc00:", "fe80:",  # IPv6 loopback / link-local
-    "metadata.google.internal",  # GCP metadata
-    "169.254.169.254",           # AWS/Azure metadata
-]
-
+# ── SSRF Koruması: Gelişmiş DNS ve IP Kontrolü ─────────────────────────────────
 def is_safe_url(url: str) -> tuple[bool, str]:
     """
-    URL'nin iç ağa veya metadata servislerine işaret edip etmediğini kontrol eder.
+    URL'nin iç ağa veya metadata servislerine işaret edip etmediğini,
+    DNS çözümlemesi üzerinden (Gerçek IP adresiyle) kontrol eder.
     Döner: (güvenli_mi, hata_mesajı)
     """
     try:
@@ -65,27 +63,39 @@ def is_safe_url(url: str) -> tuple[bool, str]:
         if not host:
             return False, "Geçerli bir URL giriniz."
 
-        # Protokol kontrolü
+        # 1. Protokol kontrolü
         if parsed.scheme not in ("http", "https"):
             return False, "Yalnızca http ve https protokolleri desteklenir."
 
-        # Engellenen host kontrolü
-        for blocked in BLOCKED_HOSTS:
-            if host == blocked or host.startswith(blocked):
-                return False, "Bu adrese tarama yapılamaz (iç ağ veya özel adres)."
+        # 2. Hostname'i IP adresine çevir (DNS Çözümleme ile Atlatma Koruması)
+        try:
+            ip_str = socket.gethostbyname(host)
+        except socket.gaierror:
+            return False, "Alan adı çözümlenemedi. Geçersiz veya kapalı bir site olabilir."
+
+        # 3. IP adresini kontrol et
+        try:
+            ip_obj = ipaddress.ip_address(ip_str)
+        except ValueError:
+            return False, "Geçersiz bir IP adresi formatı."
+
+        if ip_obj.is_loopback:
+            return False, "Yerel ağa (localhost) tarama yapılamaz."
+        if ip_obj.is_private:
+            return False, "Özel/İç ağ (Private IP) adreslerine tarama yapılamaz."
+        if ip_obj.is_link_local:
+            return False, "Bulut metadata adreslerine erişim yasaktır."
+        if ip_obj.is_multicast or ip_obj.is_unspecified or ip_obj.is_reserved:
+            return False, "Rezerve edilmiş IP adresleri taranamaz."
 
         return True, ""
 
-    except Exception:
-        return False, "URL ayrıştırılamadı. Lütfen geçerli bir URL girin."
+    except Exception as e:
+        return False, f"URL ayrıştırılamadı veya bir hata oluştu: {str(e)}"
 
 
 # ── API Key Doğrulama ─────────────────────────────────────────────────────────
 def check_api_key() -> bool:
-    """
-    REQUIRE_AUTH=true ise X-API-Key header'ını doğrular.
-    API_KEY boşsa veya REQUIRE_AUTH=false ise her zaman True döner.
-    """
     if not REQUIRE_AUTH or not API_KEY:
         return True
     token = request.headers.get("X-API-Key", "")
@@ -98,7 +108,7 @@ def check_api_key() -> bool:
 
 @app.after_request
 def add_security_headers(response):
-    """Güvenlik + önbellek engelleme başlıkları."""
+    """Tarayıcı önbelleğini engelleme ve güvenlik başlıkları"""
     response.headers["Cache-Control"]             = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"]                    = "no-cache"
     response.headers["Expires"]                   = "0"
@@ -131,7 +141,6 @@ def index():
 @app.route("/api/scan", methods=["POST"])
 @limiter.limit("5 per hour; 20 per day")
 def start_scan():
-    # ── Kimlik doğrulama ──
     if not check_api_key():
         return jsonify({"error": "Yetkisiz erişim"}), 401
 
@@ -141,11 +150,10 @@ def start_scan():
 
     if not url:
         return jsonify({"error": "URL gerekli"}), 400
-
     if not url.startswith("http"):
         url = "https://" + url
 
-    # ── SSRF kontrolü ──
+    # Gelişmiş SSRF Kontrolü
     safe, err_msg = is_safe_url(url)
     if not safe:
         return jsonify({"error": err_msg}), 400
@@ -153,19 +161,14 @@ def start_scan():
     if not modules:
         return jsonify({"error": "En az bir modül seçin"}), 400
 
-    # ── Tarama başlat ──
     scan_id               = str(int(time.time() * 1000))
     scan_queues[scan_id]  = queue.Queue()
     scan_results[scan_id] = None
     cancel_event          = threading.Event()
     scan_events[scan_id]  = cancel_event
 
-    thread = threading.Thread(
-        target=run_scan,
-        args=(scan_id, url, modules, cancel_event),
-        daemon=True
-    )
-    thread.start()
+    # Taramayı sınırsız Thread yerine Thread Havuzuna (Executor) gönder
+    executor.submit(run_scan, scan_id, url, modules, cancel_event)
 
     return jsonify({"scan_id": scan_id})
 
@@ -183,7 +186,8 @@ def cancel_scan(scan_id):
 # =============================================================================
 
 def run_scan(scan_id, url, modules, cancel_event):
-    q = scan_queues[scan_id]
+    q = scan_queues.get(scan_id)
+    if not q: return
 
     print("\n" + "=" * 50)
     print(f">>> TARAMA BAŞLADI  |  Hedef: {url}")
@@ -246,8 +250,8 @@ def run_scan(scan_id, url, modules, cancel_event):
                 counts[sev] += 1
 
         score = max(0, 100 - counts["HIGH"] * 20 - counts["MEDIUM"] * 5 - counts["LOW"] * 1)
-
         result = {"findings": findings, "counts": counts, "score": score}
+        
         scan_results[scan_id] = result
         q.put("__DONE__")
 
@@ -260,7 +264,7 @@ def run_scan(scan_id, url, modules, cancel_event):
 
 
 # =============================================================================
-#  POLLING
+#  POLLING & SSE
 # =============================================================================
 
 @app.route("/api/status/<scan_id>", methods=["GET"])
@@ -286,9 +290,13 @@ def get_status(scan_id):
     return jsonify({"status": "ok", "messages": msgs, "done": is_done})
 
 
-# =============================================================================
-#  SSE (opsiyonel fallback)
-# =============================================================================
+@app.route("/api/results/<scan_id>", methods=["GET"])
+def get_results(scan_id):
+    result = scan_results.get(scan_id)
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Sonuç bulunamadı"}), 404
+
 
 @app.route("/api/stream/<scan_id>", methods=["GET"])
 def stream(scan_id):
@@ -326,14 +334,6 @@ def stream(scan_id):
     )
 
 
-@app.route("/api/results/<scan_id>", methods=["GET"])
-def get_results(scan_id):
-    result = scan_results.get(scan_id)
-    if result:
-        return jsonify(result)
-    return jsonify({"error": "Sonuç bulunamadı"}), 404
-
-
 # =============================================================================
 #  STATİK DOSYA & HATA YÖNETİCİLERİ
 # =============================================================================
@@ -354,19 +354,11 @@ def serve_static(filename):
 def not_found(error):
     path = request.path.lower()
     if path == "/favicon.ico":
-        return (
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
-            '<rect width="100" height="100" fill="#f5f3f0"/>'
-            '<text x="50" y="60" font-size="70" text-anchor="middle">🛡</text>'
-            "</svg>",
-            200,
-            {"Content-Type": "image/svg+xml"},
-        )
-    if path == "/manifest.json":
-        return jsonify({}), 200
-    if path == "/robots.txt":
-        return "User-agent: *\nDisallow: /\n", 200, {"Content-Type": "text/plain"}
-    silent_paths = {"/x", "/.env", "/.git", "/wp-admin", "/admin", "/phpmyadmin"}
+        return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+                '<rect width="100" height="100" fill="#f5f3f0"/>'
+                '<text x="50" y="60" font-size="70" text-anchor="middle">🛡</text></svg>',
+                200, {"Content-Type": "image/svg+xml"})
+    silent_paths = {"/x", "/.env", "/.git", "/wp-admin", "/admin"}
     if path in silent_paths:
         return "", 204
     return "", 404
@@ -374,71 +366,46 @@ def not_found(error):
 
 @app.errorhandler(429)
 def rate_limit_exceeded(e):
-    return jsonify({
-        "error": "Çok fazla istek gönderildi. Lütfen bir süre bekleyip tekrar deneyin."
-    }), 429
+    return jsonify({"error": "Çok fazla istek gönderildi. Lütfen bekleyin."}), 429
 
 
 # =============================================================================
-#  HABER RSS
+#  HABER RSS (Güvenli XML Parse)
 # =============================================================================
-
-import urllib.request
-import xml.etree.ElementTree as ET
-import re
 
 _news_cache    = {"data": [], "ts": 0}
 NEWS_CACHE_TTL = 600
 NEWS_FEED_URL  = "https://shiftdelete.net/feed"
 NEWS_COUNT     = 10
 
-
 def _fetch_url(url, timeout=6):
     try:
         req = urllib.request.Request(
             url,
-            # Gerçek bir Google Chrome tarayıcısı gibi davranıyoruz:
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
         )
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.read()
-    except Exception as e:
-        print(f"[!] İstek hatası ({url}): {e}") # Hatayı konsolda görmek için ekleyin
+    except Exception:
         return None
 
 def _og_image(html_bytes):
-    if not html_bytes:
-        return ""
+    if not html_bytes: return ""
     html = html_bytes.decode("utf-8", errors="ignore")
     m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html)
-    if m:
-        return m.group(1)
-    m = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', html)
-    return m.group(1) if m else ""
-
+    if m: return m.group(1)
+    return ""
 
 def _extract_image_from_item(item, NS_MEDIA, NS_CONTENT):
     t = item.find(f"{{{NS_MEDIA}}}thumbnail")
-    if t is not None and t.get("url"):
-        return t.get("url")
-    c = item.find(f"{{{NS_MEDIA}}}content")
-    if c is not None and c.get("url"):
-        url = c.get("url", "")
-        if any(url.lower().endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif")):
-            return url
+    if t is not None and t.get("url"): return t.get("url")
     e = item.find("enclosure")
-    if e is not None:
-        url  = e.get("url", "")
-        mime = e.get("type", "")
-        if "image" in mime or any(url.lower().endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp")):
-            return url
+    if e is not None and "image" in e.get("type", ""): return e.get("url", "")
     ce = item.find(f"{{{NS_CONTENT}}}encoded")
     if ce is not None and ce.text:
         m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', ce.text)
-        if m:
-            return m.group(1)
+        if m: return m.group(1)
     return ""
-
 
 @app.route("/api/news", methods=["GET"])
 @limiter.limit("30 per hour")
@@ -448,9 +415,9 @@ def get_news():
         return jsonify({"articles": _news_cache["data"]})
     try:
         raw = _fetch_url(NEWS_FEED_URL, timeout=8)
-        if not raw:
-            raise Exception("RSS beslemesi indirilemedi.")
+        if not raw: raise Exception("RSS indirilemedi.")
 
+        # Standart kütüphane yerine defusedxml kullanılarak XML Bombası önleniyor
         root    = ET.fromstring(raw)
         channel = root.find("channel")
         items   = channel.findall("item") if channel else []
@@ -464,18 +431,17 @@ def get_news():
             title    = title_el.text.strip() if title_el is not None and title_el.text else "Başlıksız"
             link_el  = item.find("link")
             link     = (link_el.text or "").strip() if link_el is not None else "#"
-            if not link:
-                guid = item.find("guid")
-                link = (guid.text or "#").strip() if guid is not None else "#"
             date_el  = item.find("pubDate")
             date     = date_el.text.strip() if date_el is not None and date_el.text else ""
             desc_el  = item.find("description")
             raw_desc = desc_el.text if desc_el is not None and desc_el.text else ""
             summary  = re.sub(r"<[^>]+>", "", raw_desc).strip()[:200]
             image    = _extract_image_from_item(item, NS_MEDIA, NS_CONTENT)
+            
             if not image and link and link != "#":
                 page  = _fetch_url(link, timeout=6)
                 image = _og_image(page)
+                
             articles.append({"title": title, "link": link, "date": date, "summary": summary, "image": image})
 
         _news_cache["data"] = articles
@@ -483,21 +449,22 @@ def get_news():
         return jsonify({"articles": articles})
 
     except Exception as e:
-        print(f"[!] RSS çekme hatası: {e}")
         if _news_cache["data"]:
             return jsonify({"articles": _news_cache["data"]})
         return jsonify({"articles": [], "error": str(e)}), 500
 
 
 # =============================================================================
-#  BAŞLANGIÇ
+#  BAŞLANGIÇ (Canlı Sunucu İçin Port Ayarı)
 # =============================================================================
 
 if __name__ == "__main__":
     print("=" * 55)
     print("  WebShield Scanner — Web Sunucusu")
-    print("  http://localhost:5000  adresinde çalışıyor")
     if REQUIRE_AUTH:
         print("  API Key doğrulaması: AÇIK")
     print("=" * 55)
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    
+    # Render, Heroku vb. platformlar PORT atar. Bulamazsa 5000'de çalışır.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
