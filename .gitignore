@@ -40,3 +40,7 @@ Thumbs.db
 *.cert
 *.crt
 secrets.json
+app.py
+.env.example
+security_scanner.html
+scanner.py
