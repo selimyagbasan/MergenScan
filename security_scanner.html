@@ -1034,7 +1034,6 @@
 
 <body>
 
-  <!-- ── Nav ─────────────────────────────────────────────────────────────── -->
   <nav>
     <a href="#" class="logo">
       <div class="logo-mark">WS</div>
@@ -1049,7 +1048,6 @@
 
   <div class="container">
 
-    <!-- ── Hero ──────────────────────────────────────────────────────────── -->
     <div id="mainContent">
       <section class="hero">
         <div class="hero-eyebrow">
@@ -1059,7 +1057,6 @@
         <h1>Siteniz <em>ne kadar</em><br>güvenli?</h1>
         <p class="hero-sub">SQL Injection, XSS, CORS ve daha fazlasını — saniyeler içinde analiz edin.</p>
 
-        <!-- Scanner Input -->
         <div class="scanner-wrap">
           <div class="scanner-box">
             <input
@@ -1098,7 +1095,6 @@
           </div>
         </div>
 
-        <!-- Stats -->
         <div class="stats-strip">
           <div class="stat-item">
             <span class="stat-num">19</span>
@@ -1116,12 +1112,7 @@
         </div>
       </section>
 
-    </div><!-- /#mainContent -->
-
-    <!-- ── Scanner Content ─────────────────────────────────────────────────── -->
-
-      <!-- Progress -->
-      <div class="progress-section" id="progressSection">
+    </div><div class="progress-section" id="progressSection">
         <div class="progress-bar-bg">
           <div class="progress-bar-fill" id="progressFill"></div>
         </div>
@@ -1139,7 +1130,6 @@
         </div>
       </div>
 
-      <!-- Results -->
       <div class="results-section" id="resultsSection">
         <div class="results-top">
           <div>
@@ -1157,7 +1147,6 @@
         <button class="btn-rescan" onclick="resetScan()">↺ Yeniden Tara</button>
       </div>
 
-    <!-- ── Removed Python Tab ──────────────────────────────────────────────── -->
     <div id="tab-python" style="display:none">
       <div class="disclaimer">
         <span class="icon">⚠</span>
@@ -1267,7 +1256,7 @@ def test_sqli(url, session):
 # ─── 2. XSS ───────────────────────────────────────────────────────────────────
 XSS_PAYLOADS = [
     "<script>alert('XSS')</script>",
-    "<img src="resim_url_buraya" onerror="this.onerror=null; this.src='/static/varsayilan-haber-resmi.jpg';" />",
+    "<img src=\"resim_url_buraya\" onerror=\"this.onerror=null; this.src='/static/varsayilan-haber-resmi.jpg';\" />",
     "<svg onload=alert(1)>",
     "'><script>alert(1)</script>",
 ]
@@ -1331,7 +1320,6 @@ if __name__ == "__main__":
       </div>
     </div>
 
-    <!-- ── News Section ────────────────────────────────────────────────────── -->
     <section class="news-section">
       <div class="news-header">
         <div>
@@ -1344,16 +1332,12 @@ if __name__ == "__main__":
       <div class="news-grid" id="newsGrid"></div>
     </section>
 
-  </div><!-- /.container -->
-
-  <!-- ── Footer ─────────────────────────────────────────────────────────── -->
-  <div class="divider"></div>
+  </div><div class="divider"></div>
   <footer>
     <p>WebShield — Yalnızca yetkili testler için</p>
     <p>© 2025</p>
   </footer>
 
-  <!-- ── PDF Modal ──────────────────────────────────────────────────────── -->
   <div id="pdfModal" style="display:none;position:fixed;inset:0;background:rgba(17,16,16,0.5);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
     <div class="pdf-modal-box">
       <div class="pdf-modal-icon">↓</div>
@@ -1367,7 +1351,6 @@ if __name__ == "__main__":
     </div>
   </div>
 
-  <!-- ── Scripts ────────────────────────────────────────────────────────── -->
   <script>
     let lineCount     = 0;
     let currentScanId = '';
@@ -1376,6 +1359,17 @@ if __name__ == "__main__":
     window.currentFindings = [];
     window.currentResult   = {};
     window.currentUrl      = '';
+
+    // EKLENEN KISIM: XSS engellemek için metin temizleme fonksiyonu
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
 
     function switchTab(name) {
       document.querySelectorAll('.tab-btn').forEach((b, i) => {
@@ -1788,10 +1782,11 @@ if __name__ == "__main__":
         list.innerHTML = '<div style="text-align:center;padding:40px 0;font-family:var(--serif);font-size:18px;font-weight:300;font-style:italic;color:var(--green)">Hiçbir açık tespit edilmedi.</div>';
       }
 
+      // EKLENEN KISIM: Bulunan açıkları XSS süzgecinden (escapeHTML) geçirerek listeye ekliyoruz
       findings.forEach(f => {
         const card = document.createElement('div');
         card.className = 'finding-card';
-       card.innerHTML = `
+        card.innerHTML = `
   <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
     <div class="severity-pip ${sevMap[f.severity]||'sev-low'}"></div>
     <div class="finding-title">${escapeHTML(f.title)}</div>
@@ -1802,6 +1797,7 @@ if __name__ == "__main__":
     <div class="finding-detail">${escapeHTML(f.detail)}</div>
     <div class="remediation"><h4>Çözüm Önerisi</h4><p>${escapeHTML(f.fix)}</p></div>
   </div>`;
+        list.appendChild(card); 
       });
 
       document.getElementById('resultsSection').classList.add('visible');
@@ -1827,16 +1823,17 @@ if __name__ == "__main__":
             try { dateStr = new Date(a.date).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'}); }
             catch(e) { dateStr = a.date.slice(0,16); }
           }
+          // EKLENEN KISIM: RSS kaynağından gelen haber başlıklarını ve özetlerini XSS süzgecinden geçiriyoruz
           const imgHtml = a.image
-            ? `<div class="news-img" style="background-image:url('${a.image}')"></div>`
+            ? `<div class="news-img" style="background-image:url('${escapeHTML(a.image)}')"></div>`
             : `<div class="news-img news-img-placeholder">📰</div>`;
           return `
-            <a class="news-card" href="${a.link}" target="_blank" rel="noopener noreferrer">
+            <a class="news-card" href="${escapeHTML(a.link)}" target="_blank" rel="noopener noreferrer">
               ${imgHtml}
               <div class="news-body">
                 <div class="news-date">${dateStr}</div>
-                <div class="news-title">${a.title}</div>
-                ${a.summary?`<div class="news-summary">${a.summary}</div>`:''}
+                <div class="news-title">${escapeHTML(a.title)}</div>
+                ${a.summary?`<div class="news-summary">${escapeHTML(a.summary)}</div>`:''}
               </div>
             </a>`;
         }).join('');
