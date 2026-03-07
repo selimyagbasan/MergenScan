@@ -15,6 +15,10 @@
 import time
 import requests
 import urllib3
+import html # BÜTÜN ZARARLI KARAKTERLERİ TEMİZLEMEK İÇİN
+import time
+import requests
+import urllib3
 
 # Öz-imzalı sertifika uyarılarını sustur (test ortamları için)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -146,21 +150,21 @@ class WebShieldScanner:
         time.sleep(0.5)
 
     def test_xss(self, url):
-        """
-        Cross-Site Scripting (XSS) testi.
-        Script payload'larını form alanlarına ve URL parametrelerine gömer;
-        yanıtta encode edilmemiş payload'ın geri döndüğünü kontrol eder.
-
-        Risk: MEDIUM-HIGH — Oturum çalma, kimlik avı, zararlı içerik enjeksiyonu
-        """
-        self._check_cancel()
-        self._log("[i] XSS testi başladı...")
-
-        payloads = [
-            "<script>alert('XSS')</script>",
-            "<img src=x onerror=alert(1)>",
-            "<svg onload=alert(1)>",
-        ]
+        # ...
+        for payload in payloads:
+            r = self._safe_get(url, params={"q": payload})
+            if r and payload in r.text:
+                # Güvenli hale getirme işlemi:
+                guvenli_payload = html.escape(payload[:60])
+                
+                self.add_finding(
+                    title    = "Cross-Site Scripting (XSS)",
+                    severity = "HIGH",
+                    detail   = f"Payload yanıtta encode edilmeden yansıtıldı: {guvenli_payload}",
+                    fix      = "Tüm kullanıcı girdilerini HTML encode edin; Content-Security-Policy başlığı ekleyin."
+                )
+                self._log("[✗] XSS açığı bulundu!")
+                return
 
         for payload in payloads:
             r = self._safe_get(url, params={"q": payload})
