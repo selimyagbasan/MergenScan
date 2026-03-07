@@ -1267,7 +1267,7 @@ def test_sqli(url, session):
 # ─── 2. XSS ───────────────────────────────────────────────────────────────────
 XSS_PAYLOADS = [
     "<script>alert('XSS')</script>",
-    "<img src=x onerror=alert(1)>",
+    "<img src="resim_url_buraya" onerror="this.onerror=null; this.src='/static/varsayilan-haber-resmi.jpg';" />",
     "<svg onload=alert(1)>",
     "'><script>alert(1)</script>",
 ]

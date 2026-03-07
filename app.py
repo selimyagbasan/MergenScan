@@ -397,13 +397,14 @@ def _fetch_url(url, timeout=6):
     try:
         req = urllib.request.Request(
             url,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; WebShield-NewsReader/1.0)"}
+            # Gerçek bir Google Chrome tarayıcısı gibi davranıyoruz:
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
         )
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.read()
-    except Exception:
+    except Exception as e:
+        print(f"[!] İstek hatası ({url}): {e}") # Hatayı konsolda görmek için ekleyin
         return None
-
 
 def _og_image(html_bytes):
     if not html_bytes:
