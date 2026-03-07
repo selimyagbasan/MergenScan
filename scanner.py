@@ -150,7 +150,11 @@ class WebShieldScanner:
         time.sleep(0.5)
 
     def test_xss(self, url):
-        # ...
+        self._check_cancel()
+        self._log("[i] XSS (Cross-Site Scripting) testi başladı...")
+        
+        payloads = ["<script>alert('XSS')</script>", "\"><img src=x onerror=alert(1)>"]
+
         for payload in payloads:
             r = self._safe_get(url, params={"q": payload})
             if r and payload in r.text:
@@ -161,18 +165,6 @@ class WebShieldScanner:
                     title    = "Cross-Site Scripting (XSS)",
                     severity = "HIGH",
                     detail   = f"Payload yanıtta encode edilmeden yansıtıldı: {guvenli_payload}",
-                    fix      = "Tüm kullanıcı girdilerini HTML encode edin; Content-Security-Policy başlığı ekleyin."
-                )
-                self._log("[✗] XSS açığı bulundu!")
-                return
-
-        for payload in payloads:
-            r = self._safe_get(url, params={"q": payload})
-            if r and payload in r.text:
-                self.add_finding(
-                    title    = "Cross-Site Scripting (XSS)",
-                    severity = "HIGH",
-                    detail   = f"Payload yanıtta encode edilmeden yansıtıldı: {payload[:60]}",
                     fix      = "Tüm kullanıcı girdilerini HTML encode edin; Content-Security-Policy başlığı ekleyin."
                 )
                 self._log("[✗] XSS açığı bulundu!")

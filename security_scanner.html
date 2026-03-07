@@ -1791,18 +1791,17 @@ if __name__ == "__main__":
       findings.forEach(f => {
         const card = document.createElement('div');
         card.className = 'finding-card';
-        card.innerHTML = `
-          <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="severity-pip ${sevMap[f.severity]||'sev-low'}"></div>
-            <div class="finding-title">${f.title}</div>
-            <span class="severity-tag ${tagMap[f.severity]||'tag-low'}">${lblMap[f.severity]||f.severity}</span>
-            <span class="chevron">›</span>
-          </div>
-          <div class="finding-body">
-            <div class="finding-detail">${f.detail}</div>
-            <div class="remediation"><h4>Çözüm Önerisi</h4><p>${f.fix}</p></div>
-          </div>`;
-        list.appendChild(card);
+       card.innerHTML = `
+  <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
+    <div class="severity-pip ${sevMap[f.severity]||'sev-low'}"></div>
+    <div class="finding-title">${escapeHTML(f.title)}</div>
+    <span class="severity-tag ${tagMap[f.severity]||'tag-low'}">${lblMap[f.severity]||escapeHTML(f.severity)}</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-detail">${escapeHTML(f.detail)}</div>
+    <div class="remediation"><h4>Çözüm Önerisi</h4><p>${escapeHTML(f.fix)}</p></div>
+  </div>`;
       });
 
       document.getElementById('resultsSection').classList.add('visible');
