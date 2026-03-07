@@ -1,0 +1,11 @@
+{
+  "findings": [],
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0
+  },
+  "score": 100,
+  "scan_time": "2026-03-06T16:54:22.773449",
+  "cancelled": false
+}

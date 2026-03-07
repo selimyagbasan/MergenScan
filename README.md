@@ -1,1 +1,111 @@
-# WebShield
+# 🛡 WebShield — Web Güvenlik Tarayıcısı
+
+Kapsamlı web uygulama güvenlik tarayıcısı. Flask tabanlı web arayüzü ile SQL Injection, XSS, CORS, SSL ve daha fazlasını test eder.
+
+---
+
+## ⚠️ Yasal Uyarı
+
+> Bu araç **yalnızca kendi web sitelerinizi** veya yazılı izin aldığınız sistemleri test etmek için tasarlanmıştır.
+> İzinsiz sistemlerde kullanmak **yasaldır ve hukuki sonuçlar doğurabilir.**
+> Geliştirici, aracın kötüye kullanımından doğacak hiçbir zarardan sorumlu tutulamaz.
+
+---
+
+## 🚀 Kurulum
+
+### 1. Depoyu klonla
+```bash
+git clone https://github.com/kullanici-adin/webshield.git
+cd webshield
+```
+
+### 2. Sanal ortam oluştur
+```bash
+python -m venv venv
+source venv/bin/activate      # Windows: venv\Scripts\activate
+```
+
+### 3. Bağımlılıkları yükle
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Ortam değişkenlerini ayarla
+```bash
+cp .env.example .env
+# .env dosyasını düzenle
+```
+
+### 5. Çalıştır
+```bash
+python app.py
+# Tarayıcıda aç: http://localhost:5000
+```
+
+---
+
+## 🔒 Güvenlik Özellikleri
+
+| Özellik | Açıklama |
+|---|---|
+| **Rate Limiting** | IP başına saatte 5, günde 20 tarama |
+| **SSRF Koruması** | İç ağ ve metadata adreslerine erişim engeli |
+| **API Key Auth** | İsteğe bağlı, `.env` üzerinden yapılandırılır |
+| **Güvenlik Headers** | Her yanıtta X-Frame-Options, X-Content-Type-Options vb. |
+
+---
+
+## 🧪 Test Modülleri
+
+- SQL Injection
+- XSS (Reflected)
+- CSRF Token Kontrolü
+- HTTP Güvenlik Başlıkları
+- SSL/TLS Analizi
+- CORS Politikası
+- Cookie Güvenliği
+- Path Traversal
+- Hassas Dosya Keşfi
+- Open Redirect
+- Command Injection
+- Clickjacking
+- Rate Limiting Testi
+- WAF Tespiti
+- Teknoloji Tespiti
+- HTTP Methods
+- robots.txt / Sitemap Analizi
+- Subdomain & Port Tarama
+- Site Crawler
+
+---
+
+## 🌐 Canlıya Alma (Production)
+
+### Gunicorn + Nginx (Önerilen)
+```bash
+gunicorn -w 4 -b 127.0.0.1:5000 app:app
+```
+
+Nginx yapılandırması için `DEPLOY.md` dosyasına bakın.
+
+---
+
+## 📁 Proje Yapısı
+
+```
+webshield/
+├── app.py                 # Flask web sunucusu
+├── scanner.py             # Güvenlik test modülleri
+├── security_scanner.html  # Web arayüzü
+├── requirements.txt       # Python bağımlılıkları
+├── .env.example           # Örnek ortam değişkenleri
+├── .gitignore
+└── README.md
+```
+
+---
+
+## 📄 Lisans
+
+MIT License — Ayrıntılar için `LICENSE` dosyasına bakın.
