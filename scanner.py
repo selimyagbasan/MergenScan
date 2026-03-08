@@ -131,7 +131,7 @@ class WebShieldScanner:
         payloads   = ["'", "' OR '1'='1", "' OR 1=1--", "admin'--"]
         sql_errors = ["sql syntax", "mysql_fetch", "ORA-", "sqlite3", "PDOException"]
 
-        r = self._safe_get(url + "?id=1")
+        r = self._safe_get(url, params={"id": "1"})
         if r:
             for payload in payloads:
                 test_r = self._safe_get(url, params={"id": payload})

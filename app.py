@@ -261,6 +261,10 @@ def run_scan(scan_id, url, modules, cancel_event):
         print(f"\n!!! HATA: {e}\n")
         q.put(f"[✗] Tarama hatası: {e}")
         q.put("__DONE__")
+        time.sleep(300) # 5 dakika bekle
+        scan_queues.pop(scan_id, None)
+        scan_results.pop(scan_id, None)
+        scan_events.pop(scan_id, None)
 
 
 # =============================================================================
