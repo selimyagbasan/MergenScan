@@ -119,10 +119,10 @@ def add_security_headers(response):
 
 
 # ── Global Durum Değişkenleri ─────────────────────────────────────────────────
-scan_queues  = {}
-scan_results = {}
-scan_events  = {}
-scan_timestamps = {}
+scan_queues     = {}
+scan_results    = {}
+scan_events     = {}
+scan_timestamps = {}  # EKLENDİ: Terk edilmiş taramaları temizlemek için
 
 
 # =============================================================================
@@ -143,13 +143,12 @@ def index():
 @limiter.limit("5 per hour; 20 per day")
 def start_scan():
     try:
-        # 1. Kimlik Doğrulaması
         if not check_api_key():
             return jsonify({"error": "Yetkisiz erişim"}), 401
 
-        # 2. JSON Çökmelerini Engelleme (silent=True)
-        data = request.get_json(silent=True) or {}
-        url  = (data.get("url") or "").strip()
+        # JSON hatası almamak için silent=True
+        data    = request.get_json(silent=True) or {}
+        url     = (data.get("url") or "").strip()
         modules = data.get("modules", [])
 
         if not url:
@@ -157,7 +156,7 @@ def start_scan():
         if not url.startswith("http"):
             url = "https://" + url
 
-        # 3. Gelişmiş SSRF Kontrolü
+        # Gelişmiş SSRF Kontrolü
         safe, err_msg = is_safe_url(url)
         if not safe:
             return jsonify({"error": err_msg}), 400
@@ -165,31 +164,31 @@ def start_scan():
         if not modules:
             return jsonify({"error": "En az bir modül seçin"}), 400
 
-        # 4. RAM Temizliği (Hafıza Sızıntısı Koruması)
+        # --- HAFIZA SIZINTISI KORUMASI (Garbage Collection) ---
         now = time.time()
+        # 10 dakikadan (600 saniye) eski olan terk edilmiş taramaları RAM'den temizle
         expired = [sid for sid, ts in scan_timestamps.items() if now - ts > 600]
         for sid in expired:
             scan_queues.pop(sid, None)
             scan_results.pop(sid, None)
             scan_events.pop(sid, None)
             scan_timestamps.pop(sid, None)
+        # ------------------------------------------------------
 
-        # 5. Yeni Taramayı Başlat
-        scan_id = str(int(time.time() * 1000))
+        scan_id = str(int(now * 1000))
         scan_queues[scan_id]     = queue.Queue()
         scan_results[scan_id]    = None
         cancel_event             = threading.Event()
         scan_events[scan_id]     = cancel_event
-        scan_timestamps[scan_id] = now
+        scan_timestamps[scan_id] = now  # Taramanın başlama saatini kaydet
 
-        # Thread Havuzuna (Executor) gönder
+        # Taramayı Thread Havuzuna (Executor) gönder
         executor.submit(run_scan, scan_id, url, modules, cancel_event)
 
-        # Başarıyla JSON dön
         return jsonify({"scan_id": scan_id})
 
     except Exception as e:
-        # ⚠️ İŞTE EN ÖNEMLİ KISIM: Python çökse bile HTML yerine JSON hatası göndeririz
+        # Kod çökse bile HTML yerine her zaman JSON formatında hata döndürür
         return jsonify({"error": f"Sunucu iç hatası: {str(e)}"}), 500
 
 
@@ -281,10 +280,6 @@ def run_scan(scan_id, url, modules, cancel_event):
         print(f"\n!!! HATA: {e}\n")
         q.put(f"[✗] Tarama hatası: {e}")
         q.put("__DONE__")
-        time.sleep(300) # 5 dakika bekle
-        scan_queues.pop(scan_id, None)
-        scan_results.pop(scan_id, None)
-        scan_events.pop(scan_id, None)
 
 
 # =============================================================================
@@ -309,7 +304,8 @@ def get_status(scan_id):
 
     if is_done:
         scan_queues.pop(scan_id, None)
-        scan_events.pop(scan_id, None)
+        # scan_events ve scan_timestamps bilerek silinmedi, 
+        # API sonuçları çektikten sonra veya 10 dk temizliğinde silinecek.
 
     return jsonify({"status": "ok", "messages": msgs, "done": is_done})
 
@@ -338,7 +334,6 @@ def stream(scan_id):
                     result_json = json.dumps(result, ensure_ascii=False)
                     yield f'data: {{"type":"done","result":{result_json}}}\n\n'
                     scan_queues.pop(scan_id, None)
-                    scan_events.pop(scan_id, None)
                     break
                 elif msg.startswith("__PROGRESS__:"):
                     pct = msg.split(":")[1]
