@@ -38,7 +38,6 @@ executor = ThreadPoolExecutor(max_workers=3)
 API_KEY       = os.environ.get("WEBSHIELD_API_KEY", "")
 REQUIRE_AUTH  = os.environ.get("REQUIRE_AUTH", "false").lower() == "true"
 
-# ⚠️ TYPE HINTING KALDIRILDI (Eski Python sürümlerinde çökmemesi için)
 def is_safe_url(url):
     try:
         parsed = urlparse(url)
@@ -70,12 +69,10 @@ def is_safe_url(url):
     except Exception as e:
         return False, f"URL ayrıştırılamadı: {str(e)}"
 
-# ⚠️ TYPE HINTING KALDIRILDI
 def check_api_key():
     if not REQUIRE_AUTH or not API_KEY:
         return True
     return request.headers.get("X-API-Key", "") == API_KEY
-
 
 @app.after_request
 def add_security_headers(response):
@@ -92,31 +89,24 @@ scan_results    = {}
 scan_events     = {}
 scan_timestamps = {} 
 
-# ── API İÇİN GLOBAL HATA YAKALAYICILAR (HTML YERİNE JSON DÖNDÜRÜR) ──
 @app.errorhandler(404)
 def not_found(error):
-    if request.path.startswith("/api/"):
-        return jsonify({"error": "API Endpoint bulunamadı."}), 404
+    if request.path.startswith("/api/"): return jsonify({"error": "API Endpoint bulunamadı."}), 404
     path = request.path.lower()
     if path == "/favicon.ico":
         return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f5f3f0"/><text x="50" y="60" font-size="70" text-anchor="middle">🛡</text></svg>', 200, {"Content-Type": "image/svg+xml"})
-    if path in {"/x", "/.env", "/.git", "/wp-admin", "/admin"}:
-        return "", 204
+    if path in {"/x", "/.env", "/.git", "/wp-admin", "/admin"}: return "", 204
     return "", 404
 
 @app.errorhandler(405)
 def method_not_allowed(error):
-    if request.path.startswith("/api/"):
-        return jsonify({"error": "Bu metoda izin verilmiyor."}), 405
+    if request.path.startswith("/api/"): return jsonify({"error": "Bu metoda izin verilmiyor."}), 405
     return "Method Not Allowed", 405
 
 @app.errorhandler(Exception)
 def handle_global_exception(error):
-    # Çökmelerde HTML hata sayfası fırlatmayı engeller!
-    if request.path.startswith("/api/"):
-        return jsonify({"error": f"Sunucu İçi Hata: {str(error)}"}), 500
+    if request.path.startswith("/api/"): return jsonify({"error": f"Sunucu İçi Hata: {str(error)}"}), 500
     return "Sunucu Hatası", 500
-# ────────────────────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
@@ -130,8 +120,7 @@ def index():
 @app.route("/api/scan", methods=["POST"])
 @limiter.limit("5 per hour; 20 per day")
 def start_scan():
-    if not check_api_key():
-        return jsonify({"error": "Yetkisiz erişim"}), 401
+    if not check_api_key(): return jsonify({"error": "Yetkisiz erişim"}), 401
 
     data    = request.get_json(silent=True) or {}
     url     = (data.get("url") or "").strip()
@@ -175,32 +164,20 @@ def run_scan(scan_id, url, modules, cancel_event):
 
     try:
         from scanner import WebShieldScanner
-
-        def log_callback(msg):
-            q.put(msg)
-
+        def log_callback(msg): q.put(msg)
         scanner = WebShieldScanner(log_callback=log_callback, cancel_event=cancel_event)
 
         test_map = {
-            "crawl"    : lambda: scanner.crawl_site(url),
-            "sqli"     : lambda: scanner.test_sqli(url),
-            "xss"      : lambda: scanner.test_xss(url),
-            "csrf"     : lambda: scanner.test_csrf(url),
-            "headers"  : lambda: scanner.test_headers(url),
-            "traversal": lambda: scanner.test_traversal(url),
-            "files"    : lambda: scanner.test_sensitive_files(url),
-            "redirect" : lambda: scanner.test_open_redirect(url),
-            "cmdi"     : lambda: scanner.test_cmdi(url),
-            "ssl"      : lambda: scanner.test_ssl(url),
-            "cors"     : lambda: scanner.test_cors(url),
-            "cookies"  : lambda: scanner.test_cookies(url),
-            "methods"  : lambda: scanner.test_http_methods(url),
-            "clickjack": lambda: scanner.test_clickjacking(url),
-            "ratelimit": lambda: scanner.test_rate_limiting(url),
-            "tech"     : lambda: scanner.test_tech_detect(url),
-            "robots"   : lambda: scanner.test_robots_sitemap(url),
-            "waf"      : lambda: scanner.test_waf(url),
-            "ports"    : lambda: scanner.test_subdomain_port(url),
+            "crawl": lambda: scanner.crawl_site(url), "sqli": lambda: scanner.test_sqli(url),
+            "xss": lambda: scanner.test_xss(url), "csrf": lambda: scanner.test_csrf(url),
+            "headers": lambda: scanner.test_headers(url), "traversal": lambda: scanner.test_traversal(url),
+            "files": lambda: scanner.test_sensitive_files(url), "redirect": lambda: scanner.test_open_redirect(url),
+            "cmdi": lambda: scanner.test_cmdi(url), "ssl": lambda: scanner.test_ssl(url),
+            "cors": lambda: scanner.test_cors(url), "cookies": lambda: scanner.test_cookies(url),
+            "methods": lambda: scanner.test_http_methods(url), "clickjack": lambda: scanner.test_clickjacking(url),
+            "ratelimit": lambda: scanner.test_rate_limiting(url), "tech": lambda: scanner.test_tech_detect(url),
+            "robots": lambda: scanner.test_robots_sitemap(url), "waf": lambda: scanner.test_waf(url),
+            "ports": lambda: scanner.test_subdomain_port(url),
         }
 
         total = len(modules)
@@ -217,8 +194,7 @@ def run_scan(scan_id, url, modules, cancel_event):
 
         findings = scanner.findings
         counts   = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
-        for f in findings:
-            counts[f.get("severity", "LOW")] += 1
+        for f in findings: counts[f.get("severity", "LOW")] += 1
 
         score = max(0, 100 - counts["HIGH"] * 20 - counts["MEDIUM"] * 5 - counts["LOW"] * 1)
         scan_results[scan_id] = {"findings": findings, "counts": counts, "score": score}
@@ -260,7 +236,7 @@ NEWS_COUNT     = 10
 
 def _fetch_url(url, timeout=6):
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=timeout) as r: return r.read()
     except: return None
 
