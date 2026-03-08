@@ -122,6 +122,7 @@ def add_security_headers(response):
 scan_queues  = {}
 scan_results = {}
 scan_events  = {}
+scan_timestamps = {}
 
 
 # =============================================================================
@@ -141,36 +142,55 @@ def index():
 @app.route("/api/scan", methods=["POST"])
 @limiter.limit("5 per hour; 20 per day")
 def start_scan():
-    if not check_api_key():
-        return jsonify({"error": "Yetkisiz erişim"}), 401
+    try:
+        # 1. Kimlik Doğrulaması
+        if not check_api_key():
+            return jsonify({"error": "Yetkisiz erişim"}), 401
 
-    data    = request.get_json()
-    url     = (data.get("url") or "").strip()
-    modules = data.get("modules", [])
+        # 2. JSON Çökmelerini Engelleme (silent=True)
+        data = request.get_json(silent=True) or {}
+        url  = (data.get("url") or "").strip()
+        modules = data.get("modules", [])
 
-    if not url:
-        return jsonify({"error": "URL gerekli"}), 400
-    if not url.startswith("http"):
-        url = "https://" + url
+        if not url:
+            return jsonify({"error": "URL gerekli"}), 400
+        if not url.startswith("http"):
+            url = "https://" + url
 
-    # Gelişmiş SSRF Kontrolü
-    safe, err_msg = is_safe_url(url)
-    if not safe:
-        return jsonify({"error": err_msg}), 400
+        # 3. Gelişmiş SSRF Kontrolü
+        safe, err_msg = is_safe_url(url)
+        if not safe:
+            return jsonify({"error": err_msg}), 400
 
-    if not modules:
-        return jsonify({"error": "En az bir modül seçin"}), 400
+        if not modules:
+            return jsonify({"error": "En az bir modül seçin"}), 400
 
-    scan_id               = str(int(time.time() * 1000))
-    scan_queues[scan_id]  = queue.Queue()
-    scan_results[scan_id] = None
-    cancel_event          = threading.Event()
-    scan_events[scan_id]  = cancel_event
+        # 4. RAM Temizliği (Hafıza Sızıntısı Koruması)
+        now = time.time()
+        expired = [sid for sid, ts in scan_timestamps.items() if now - ts > 600]
+        for sid in expired:
+            scan_queues.pop(sid, None)
+            scan_results.pop(sid, None)
+            scan_events.pop(sid, None)
+            scan_timestamps.pop(sid, None)
 
-    # Taramayı sınırsız Thread yerine Thread Havuzuna (Executor) gönder
-    executor.submit(run_scan, scan_id, url, modules, cancel_event)
+        # 5. Yeni Taramayı Başlat
+        scan_id = str(int(time.time() * 1000))
+        scan_queues[scan_id]     = queue.Queue()
+        scan_results[scan_id]    = None
+        cancel_event             = threading.Event()
+        scan_events[scan_id]     = cancel_event
+        scan_timestamps[scan_id] = now
 
-    return jsonify({"scan_id": scan_id})
+        # Thread Havuzuna (Executor) gönder
+        executor.submit(run_scan, scan_id, url, modules, cancel_event)
+
+        # Başarıyla JSON dön
+        return jsonify({"scan_id": scan_id})
+
+    except Exception as e:
+        # ⚠️ İŞTE EN ÖNEMLİ KISIM: Python çökse bile HTML yerine JSON hatası göndeririz
+        return jsonify({"error": f"Sunucu iç hatası: {str(e)}"}), 500
 
 
 @app.route("/api/cancel/<scan_id>", methods=["POST"])
