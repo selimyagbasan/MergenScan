@@ -1101,7 +1101,472 @@
     </div>
   </div>
 
-  
+  <script>
+    let lineCount     = 0;
+    let currentScanId = '';
+    let scanActive    = false;
+
+    window.currentFindings = [];
+    window.currentResult   = {};
+    window.currentUrl      = '';
+
+    // XSS engellemek için metin temizleme fonksiyonu
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function downloadPDF() {
+      const findings = window.currentFindings || [];
+      const result   = window.currentResult   || {};
+      const url      = window.currentUrl      || 'Bilinmiyor';
+      const counts   = result.counts || { HIGH: 0, MEDIUM: 0, LOW: 0 };
+      const score    = result.score  || 0;
+
+      if (!url || url === 'Bilinmiyor') { alert('Henuz tamamlanmis bir tarama yok!'); return; }
+
+      let jsPDF = null;
+      if (window.jspdf && window.jspdf.jsPDF) jsPDF = window.jspdf.jsPDF;
+      else if (window.jsPDF) jsPDF = window.jsPDF;
+      else if (typeof jspdf !== 'undefined' && jspdf.jsPDF) jsPDF = jspdf.jsPDF;
+
+      if (!jsPDF) {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload = () => {
+          const s2 = document.createElement('script');
+          s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+          s2.onload = () => { alert('PDF kütüphanesi yüklendi. Lütfen tekrar "İndir" butonuna tıklayın.'); };
+          document.head.appendChild(s2);
+        };
+        s.onerror = () => alert('PDF kütüphanesi yüklenemedi.');
+        document.head.appendChild(s);
+        return;
+      }
+
+      function tr(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/\u011f/g,'g').replace(/\u011e/g,'G')
+          .replace(/\xfc/g,'u').replace(/\xdc/g,'U')
+          .replace(/\u015f/g,'s').replace(/\u015e/g,'S')
+          .replace(/\u0131/g,'i').replace(/\u0130/g,'I')
+          .replace(/\xf6/g,'o').replace(/\xd6/g,'O')
+          .replace(/\xe7/g,'c').replace(/\xc7/g,'C');
+      }
+
+      try {
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageW    = doc.internal.pageSize.getWidth();
+        const margin   = 15;
+        const contentW = pageW - margin * 2;
+        let y = 20;
+
+        const CLR = {
+          ink:   [17, 16, 16],
+          ink3:  [122, 118, 117],
+          paper: [245, 243, 240],
+          green: [26, 107, 58],
+          amber: [138, 92, 0],
+          red:   [165, 28, 28],
+          white: [254, 254, 254],
+          blue:  [28, 79, 165]
+        };
+
+        doc.setFillColor(...CLR.ink);
+        doc.rect(0, 0, pageW, 36, 'F');
+        doc.setTextColor(...CLR.white);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('WebShield', margin, 15);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...CLR.ink3);
+        doc.text('Guvenlik Analiz Raporu', margin, 23);
+        const dateStr = new Date().toLocaleDateString('tr-TR');
+        doc.setTextColor(...CLR.white);
+        doc.text(dateStr, pageW - margin, 15, { align: 'right' });
+        const urlShort = tr(url.replace(/https?:\/\//, '').substring(0, 45));
+        doc.text('Hedef: ' + urlShort, pageW - margin, 23, { align: 'right' });
+        y = 46;
+
+        const scoreColor = score >= 80 ? CLR.green : score >= 50 ? CLR.amber : CLR.red;
+        doc.setFillColor(...CLR.paper);
+        doc.rect(margin, y, contentW, 22, 'F');
+        doc.setTextColor(...scoreColor);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text(String(score), margin + 8, y + 15);
+        doc.setFontSize(9);
+        doc.text('/100', margin + 22, y + 15);
+        doc.setTextColor(...CLR.ink3);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        const lbl = score >= 80 ? 'GUVENLI' : score >= 50 ? 'ORTA RISK' : 'RISKLI';
+        doc.text('Guvenlik Skoru  -  ' + lbl, margin + 34, y + 10);
+        doc.text('Yuksek: ' + (counts.HIGH||0) + '   Orta: ' + (counts.MEDIUM||0) + '   Dusuk: ' + (counts.LOW||0) + '   Toplam: ' + findings.length + ' bulgu', margin + 34, y + 17);
+        y += 30;
+
+        if (findings.length === 0) {
+          doc.setFillColor(238, 247, 242);
+          doc.rect(margin, y, contentW, 14, 'F');
+          doc.setTextColor(...CLR.green);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('Hicbir acik tespit edilmedi!', pageW / 2, y + 9, { align: 'center' });
+          y += 22;
+        } else if (typeof doc.autoTable === 'function') {
+          doc.setTextColor(...CLR.ink);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('BULGULAR', margin, y);
+          y += 5;
+          const sevColor = { HIGH: CLR.red, MEDIUM: CLR.amber, LOW: CLR.blue };
+          doc.autoTable({
+            startY: y,
+            head: [['Risk', 'Baslik', 'Detay']],
+            body: findings.map(f => [tr(f.severity || 'LOW'), tr(f.title), tr(f.detail)]),
+            theme: 'grid',
+            margin: { left: margin, right: margin },
+            headStyles: { fillColor: CLR.ink, textColor: CLR.white, fontStyle: 'bold', fontSize: 8 },
+            bodyStyles: { fontSize: 7, textColor: CLR.ink },
+            columnStyles: { 0: { cellWidth: 18, fontStyle: 'bold' }, 1: { cellWidth: 52 }, 2: { cellWidth: contentW - 70 } },
+            didParseCell: (data) => {
+              if (data.section === 'body' && data.column.index === 0)
+                data.cell.styles.textColor = sevColor[data.cell.raw] || CLR.blue;
+            }
+          });
+          y = doc.lastAutoTable.finalY + 10;
+
+          if (y > 240) doc.addPage();
+          doc.setTextColor(...CLR.ink);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('COZUM ONERILERI', margin, y);
+          y += 5;
+          doc.autoTable({
+            startY: y,
+            head: [['Sorun', 'Cozum Onerisi']],
+            body: findings.map(f => [tr(f.title), tr(f.fix)]),
+            theme: 'striped',
+            margin: { left: margin, right: margin },
+            headStyles: { fillColor: CLR.ink, textColor: CLR.white, fontStyle: 'bold', fontSize: 8 },
+            bodyStyles: { fontSize: 7, textColor: CLR.ink },
+            columnStyles: { 0: { cellWidth: 58 }, 1: { cellWidth: contentW - 58 } }
+          });
+        } else {
+          doc.setTextColor(...CLR.ink);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('BULGULAR (' + findings.length + ' adet)', margin, y);
+          y += 8;
+          findings.forEach(f => {
+            if (y > 270) { doc.addPage(); y = 20; }
+            const sc = f.severity === 'HIGH' ? CLR.red : f.severity === 'MEDIUM' ? CLR.amber : CLR.blue;
+            doc.setTextColor(...sc);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.text('[' + tr(f.severity || 'LOW') + '] ' + tr(f.title), margin, y);
+            y += 5;
+            doc.setTextColor(...CLR.ink3);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            const lines = doc.splitTextToSize(tr(f.detail), contentW - 4);
+            doc.text(lines, margin + 4, y);
+            y += lines.length * 4 + 4;
+          });
+        }
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setDrawColor(220, 216, 211);
+          doc.setLineWidth(0.3);
+          doc.line(margin, 287, pageW - margin, 287);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(...CLR.ink3);
+          doc.text('WebShield Security Scanner  -  Yalnizca yetkili testler icin', margin, 292);
+          doc.text('Sayfa ' + i + ' / ' + pageCount, pageW - margin, 292, { align: 'right' });
+        }
+
+        const cleanUrl = url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '_').substring(0, 40);
+        doc.save('webshield_' + cleanUrl + '_' + new Date().toISOString().slice(0, 10) + '.pdf');
+        closePDFModal();
+
+      } catch (err) {
+        console.error('PDF hata:', err);
+        alert('PDF olusturulurken hata: ' + err.message);
+      }
+    }
+
+    function closePDFModal() {
+      document.getElementById('pdfModal').style.display = 'none';
+    }
+
+    function toggleModuleMenu() {
+      document.getElementById('moduleDropdown').classList.toggle('active');
+    }
+
+    const modules = [
+      { id:'crawl',    name:'Site Crawler',      desc:'tüm site linklerini tarar',      icon:'🕷' },
+      { id:'sqli',     name:'SQL Injection',      desc:'error-based, boolean-blind',     icon:'💉' },
+      { id:'xss',      name:'XSS (Form + URL)',   desc:'reflected XSS testleri',         icon:'🔥' },
+      { id:'csrf',     name:'CSRF',               desc:'token & header kontrolü',        icon:'🔄' },
+      { id:'headers',  name:'HTTP Headers',       desc:'CSP, HSTS, X-Frame, server',     icon:'📋' },
+      { id:'traversal',name:'Path Traversal',     desc:'dosya sistemi erişim testi',     icon:'📁' },
+      { id:'files',    name:'Hassas Dosya Keşfi', desc:'.env, .git, backup, config',     icon:'🔍' },
+      { id:'redirect', name:'Open Redirect',      desc:'URL yönlendirme açığı',          icon:'↗️' },
+      { id:'cmdi',     name:'Command Injection',  desc:'OS komut enjeksiyonu',           icon:'⚡' },
+      { id:'ssl',      name:'SSL/TLS Analizi',    desc:'sertifika & protokol kontrolü',  icon:'🔒' },
+      { id:'cors',     name:'CORS Testi',         desc:'origin politikası kontrolü',     icon:'🌐' },
+      { id:'cookies',  name:'Cookie Güvenliği',   desc:'Secure, HttpOnly, SameSite',     icon:'🍪' },
+      { id:'methods',  name:'HTTP Methods',       desc:'PUT, DELETE, TRACE kontrolü',    icon:'📡' },
+      { id:'clickjack',name:'Clickjacking',       desc:'X-Frame-Options kontrolü',       icon:'🖼' },
+      { id:'ratelimit',name:'Rate Limiting',      desc:'brute force koruması',           icon:'🔐' },
+      { id:'tech',     name:'Teknoloji Tespiti',  desc:'CMS & framework keşfi',          icon:'🏗' },
+      { id:'robots',   name:'robots.txt / sitemap',desc:'gizli yol analizi',             icon:'🤖' },
+      { id:'waf',      name:'WAF Tespiti',        desc:'firewall keşfi',                 icon:'🛡' },
+      { id:'ports',    name:'Subdomain & Port',   desc:'subdomain & port tarama',        icon:'🔌' }
+    ];
+
+    function initializeModules() {
+      const grid = document.getElementById('modulesGrid');
+      if (!grid) return;
+      grid.innerHTML = modules.map(mod => `
+        <label class="module-toggle active" data-module="${mod.id}" onclick="this.classList.toggle('active')">
+          <input type="checkbox" checked>
+          <div class="toggle-dot"></div>
+          <div class="module-info">
+            <div class="name">${mod.name}</div>
+            <div class="desc">${mod.desc}</div>
+          </div>
+          <div class="module-icon">${mod.icon}</div>
+        </label>
+      `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeModules();
+      loadNews();
+    });
+
+    function toggleAll(state) {
+      document.querySelectorAll('.module-toggle').forEach(el => {
+        state ? el.classList.add('active') : el.classList.remove('active');
+      });
+    }
+
+    function getSelectedModules() {
+      const mods = [];
+      document.querySelectorAll('.module-toggle.active').forEach(el => {
+        const m = el.getAttribute('data-module');
+        if (m) mods.push(m);
+      });
+      return mods;
+    }
+
+    function addLog(msg) {
+      const sub = document.getElementById('spinnerSub');
+      if (sub) sub.textContent = '// ' + msg.replace(/\[.\]\s?/g,'').substring(0,60);
+    }
+
+    function resetScan() {
+      document.getElementById('resultsSection').classList.remove('visible');
+      document.getElementById('mainContent').style.display = '';
+      document.getElementById('scanBtn').disabled = false;
+      document.getElementById('scanBtn').innerHTML = 'Tara <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      window.scrollTo({ top:0, behavior:'smooth' });
+    }
+
+    async function startScan() {
+      const url = document.getElementById('targetUrl').value.trim();
+      if (!url) {
+        const inp = document.getElementById('targetUrl');
+        inp.style.borderColor = 'var(--red)';
+        inp.focus();
+        setTimeout(() => inp.style.borderColor = '', 1500);
+        return;
+      }
+      const mods = getSelectedModules();
+      if (mods.length === 0) { alert('En az bir modül seçin!'); return; }
+      if (scanActive) return;
+      scanActive = true;
+      lineCount = 0;
+
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('progressSection').classList.add('visible');
+      document.getElementById('resultsSection').classList.remove('visible');
+      document.getElementById('progressFill').style.width = '0%';
+      document.getElementById('pctText').textContent = '0%';
+      document.getElementById('ringFg').style.strokeDashoffset = '440';
+      window.scrollTo({ top:0, behavior:'smooth' });
+
+      try {
+        const res = await fetch('/api/scan', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ url, modules: mods })
+        });
+        const data = await res.json();
+        if (data.error) {
+          addLog('[✗] Hata: ' + data.error);
+          scanActive = false;
+          return;
+        }
+        currentScanId = data.scan_id;
+
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusRes = await fetch('/api/status/' + currentScanId);
+            const statusData = await statusRes.json();
+            if (statusData.status === 'error') { clearInterval(pollInterval); return; }
+            for (let msg of statusData.messages) {
+              if (msg === "__DONE__") {
+                clearInterval(pollInterval);
+                scanActive = false;
+                document.getElementById('progressSection').classList.remove('visible');
+                document.getElementById('scanBtn').disabled = false;
+                const resultRes = await fetch('/api/results/' + currentScanId);
+                const finalResult = await resultRes.json();
+                if (!finalResult.error) showResults(url, finalResult);
+              } else if (msg.startsWith("__PROGRESS__:")) {
+                const pct = parseInt(msg.split(":")[1]);
+                document.getElementById('progressFill').style.width = pct + '%';
+                document.getElementById('pctText').textContent = pct + '%';
+                document.getElementById('spinnerText').textContent = 'Taranıyor…';
+                const offset = 440 - (440 * pct / 100);
+                document.getElementById('ringFg').style.strokeDashoffset = offset;
+              } else {
+                addLog(msg);
+              }
+            }
+          } catch(e) { console.error("Poll hatası:", e); }
+        }, 500);
+
+      } catch(err) {
+        scanActive = false;
+        document.getElementById('progressSection').classList.remove('visible');
+        document.getElementById('mainContent').style.display = '';
+        alert('Sunucu bağlantı hatası: ' + err.message);
+      }
+    }
+
+    function showResults(url, result) {
+      const { findings, counts, score } = result;
+      window.currentUrl = url;
+      window.currentResult = result;
+      window.currentFindings = findings;
+
+      const high = counts.HIGH || 0;
+      const medium = counts.MEDIUM || 0;
+      const low = counts.LOW || 0;
+      const total = findings.length;
+
+      document.getElementById('resultsMetaUrl').textContent = url;
+
+      const gaugeColor = score>=80 ? '#1a6b3a' : score>=50 ? '#8a5c00' : '#a51c1c';
+      const dashoffset = 132 - (132 * score / 100);
+      const lbl = score>=80 ? 'Güvenli' : score>=50 ? 'Orta Risk' : 'Riskli';
+      document.getElementById('scoreBadge').innerHTML = `
+        <div class="score-widget">
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 56 56">
+              <circle class="gauge-track" cx="28" cy="28" r="21" stroke-width="4"/>
+              <circle class="gauge-fill" cx="28" cy="28" r="21" stroke-width="4"
+                stroke="${gaugeColor}"
+                style="stroke-dashoffset:${dashoffset}"
+              />
+            </svg>
+            <div class="gauge-number">${score}</div>
+          </div>
+          <div class="score-info">
+            <div class="score-grade" style="color:${gaugeColor}">${lbl}</div>
+            <div class="score-desc">${total} bulgu tespit edildi</div>
+          </div>
+        </div>`;
+
+      document.getElementById('summaryGrid').innerHTML = `
+        <div class="stat-card stat-red"><span class="stat-num">${high}</span><span class="stat-lbl">Yüksek</span></div>
+        <div class="stat-card stat-orange"><span class="stat-num">${medium}</span><span class="stat-lbl">Orta</span></div>
+        <div class="stat-card stat-blue"><span class="stat-num">${low}</span><span class="stat-lbl">Düşük</span></div>
+        <div class="stat-card stat-green"><span class="stat-num">${total}</span><span class="stat-lbl">Toplam</span></div>`;
+
+      const list = document.getElementById('findingsList');
+      list.innerHTML = '';
+      const sevMap = { HIGH:'sev-high', MEDIUM:'sev-medium', LOW:'sev-low' };
+      const tagMap = { HIGH:'tag-high', MEDIUM:'tag-medium', LOW:'tag-low' };
+      const lblMap = { HIGH:'Yüksek', MEDIUM:'Orta', LOW:'Düşük' };
+
+      if (findings.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:40px 0;font-family:var(--serif);font-size:18px;font-weight:300;font-style:italic;color:var(--green)">Hiçbir açık tespit edilmedi.</div>';
+      }
+
+      findings.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'finding-card';
+        card.innerHTML = `
+  <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
+    <div class="severity-pip ${sevMap[f.severity]||'sev-low'}"></div>
+    <div class="finding-title">${escapeHTML(f.title)}</div>
+    <span class="severity-tag ${tagMap[f.severity]||'tag-low'}">${lblMap[f.severity]||escapeHTML(f.severity)}</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-detail">${escapeHTML(f.detail)}</div>
+    <div class="remediation"><h4>Çözüm Önerisi</h4><p>${escapeHTML(f.fix)}</p></div>
+  </div>`;
+        list.appendChild(card); 
+      });
+
+      document.getElementById('resultsSection').classList.add('visible');
+      document.getElementById('resultsSection').scrollIntoView({ behavior:'smooth', block:'start' });
+      document.getElementById('pdfModal').style.display = 'flex';
+    }
+
+    // ── Haberleri API Üzerinden Çekme (Gerçek Bağlantı) ─────────────────────
+    async function loadNews() {
+      const grid    = document.getElementById('newsGrid');
+      const loading = document.getElementById('newsLoading');
+      try {
+        const res  = await fetch('/api/news');
+        const data = await res.json();
+        loading.style.display = 'none';
+        if (!data.articles || data.articles.length === 0) {
+          grid.innerHTML = '<p style="font-family:var(--mono);font-size:12px;color:var(--ink-4)">Haber yüklenemedi.</p>';
+          return;
+        }
+        grid.innerHTML = data.articles.map(a => {
+          let dateStr = '';
+          if (a.date) {
+            try { dateStr = new Date(a.date).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'}); }
+            catch(e) { dateStr = a.date.slice(0,16); }
+          }
+          const imgHtml = a.image
+            ? `<div class="news-img" style="background-image:url('${escapeHTML(a.image)}')"></div>`
+            : `<div class="news-img news-img-placeholder">📰</div>`;
+          return `
+            <a class="news-card" href="${escapeHTML(a.link)}" target="_blank" rel="noopener noreferrer">
+              ${imgHtml}
+              <div class="news-body">
+                <div class="news-date">${dateStr}</div>
+                <div class="news-title">${escapeHTML(a.title)}</div>
+                ${a.summary?`<div class="news-summary">${escapeHTML(a.summary)}</div>`:''}
+              </div>
+            </a>`;
+        }).join('');
+      } catch(e) {
+        loading.style.display = 'none';
+        grid.innerHTML = '<p style="font-family:var(--mono);font-size:12px;color:var(--ink-4)">Sunucu bağlantısı kurulamadı.</p>';
+      }
+    }
+  </script>
 
 </body>
 </html>
