@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 import time
+import html as html_module
 import requests
 import urllib3
-import html
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class WebShieldScanner:
     def __init__(self, log_callback=None, cancel_event=None):
-        self.log_callback  = log_callback
-        self.cancel_event  = cancel_event
-        self.findings      = []
+        self.log_callback = log_callback
+        self.cancel_event = cancel_event
+        self.findings     = []
         self.session = requests.Session()
         self.session.verify = False
         self.session.headers.update({"User-Agent": "WebShield-Scanner/2.0"})
@@ -43,18 +43,21 @@ class WebShieldScanner:
         self._check_cancel()
         self._log("[i] SQL Injection testi başladı...")
         payloads   = ["'", "' OR '1'='1", "' OR 1=1--", "admin'--"]
-        sql_errors = ["sql syntax", "mysql_fetch", "ORA-", "sqlite3", "PDOException"]
+        sql_errors = ["sql syntax", "mysql_fetch", "ora-", "sqlite3", "pdoexception"]
 
-        r = self._safe_get(url, params={"id": "1"}) # DÜZELTİLEN YER
+        r = self._safe_get(url, params={"id": "1"})
         if r:
             for payload in payloads:
                 test_r = self._safe_get(url, params={"id": payload})
                 if test_r and any(err in test_r.text.lower() for err in sql_errors):
-                    self.add_finding("SQL Injection", "HIGH", f"'id' parametresi SQL hatasına yol açtı.", "Parametrized query kullanın.")
+                    self.add_finding(
+                        "SQL Injection", "HIGH",
+                        "'id' parametresi SQL hatasına yol açtı.",
+                        "Parametrized query kullanın."
+                    )
                     self._log("[✗] SQL Injection açığı bulundu!")
-                    break
-            else:
-                self._log("[✓] SQL Injection açığı tespit edilmedi.")
+                    return
+            self._log("[✓] SQL Injection açığı tespit edilmedi.")
         time.sleep(0.5)
 
     def test_xss(self, url):
@@ -63,10 +66,17 @@ class WebShieldScanner:
         payloads = ["<script>alert('XSS')</script>", "\"><img src=x onerror=alert(1)>"]
         for payload in payloads:
             r = self._safe_get(url, params={"q": payload})
-            if r and payload in r.text:
-                self.add_finding("Cross-Site Scripting (XSS)", "HIGH", "Payload encode edilmeden yansıtıldı.", "Kullanıcı girdisini HTML encode edin.")
-                self._log("[✗] XSS açığı bulundu!")
-                return
+            if r:
+                # FİX: HTML decode edip karşılaştır — encode edilmiş payload yanlış pozitif vermez
+                decoded_text = html_module.unescape(r.text)
+                if payload in decoded_text:
+                    self.add_finding(
+                        "Cross-Site Scripting (XSS)", "HIGH",
+                        "Payload encode edilmeden yansıtıldı.",
+                        "Kullanıcı girdisini HTML encode edin."
+                    )
+                    self._log("[✗] XSS açığı bulundu!")
+                    return
         self._log("[✓] XSS açığı tespit edilmedi.")
         time.sleep(0.5)
 
@@ -75,7 +85,11 @@ class WebShieldScanner:
         self._log("[i] CSRF korumaları kontrol ediliyor...")
         r = self._safe_get(url)
         if r and "csrf" not in r.text.lower():
-            self.add_finding("CSRF Token Eksik", "MEDIUM", "Formlarda CSRF token bulunamadı.", "CSRF token ekleyin.")
+            self.add_finding(
+                "CSRF Token Eksik", "MEDIUM",
+                "Formlarda CSRF token bulunamadı.",
+                "CSRF token ekleyin."
+            )
             self._log("[!] CSRF token eksik olabilir.")
         else:
             self._log("[✓] CSRF koruması mevcut.")
@@ -85,11 +99,24 @@ class WebShieldScanner:
         self._check_cancel()
         self._log("[i] HTTP güvenlik başlıkları inceleniyor...")
         r = self._safe_get(url)
-        if not r: return
-        required = {"Strict-Transport-Security": "MEDIUM", "X-Frame-Options": "MEDIUM", "Content-Security-Policy": "MEDIUM"}
+        if not r:
+            return
+        required = {
+            "Strict-Transport-Security": "MEDIUM",
+            "X-Frame-Options":           "MEDIUM",
+            "Content-Security-Policy":   "MEDIUM",
+        }
         missing = [h for h in required if h not in r.headers]
-        for h in missing: self.add_finding(f"Eksik Başlık: {h}", required[h], "Güvenlik başlığı eksik.", f"Sunucuya {h} ekleyin.")
-        self._log(f"[!] Eksik başlıklar: {missing}" if missing else "[✓] Güvenlik başlıkları mevcut.")
+        for h in missing:
+            self.add_finding(
+                f"Eksik Başlık: {h}", required[h],
+                "Güvenlik başlığı eksik.",
+                f"Sunucuya {h} ekleyin."
+            )
+        if missing:
+            self._log(f"[!] Eksik başlıklar: {missing}")
+        else:
+            self._log("[✓] Güvenlik başlıkları mevcut.")
         time.sleep(0.5)
 
     def test_traversal(self, url):
@@ -99,7 +126,11 @@ class WebShieldScanner:
         for payload in payloads:
             r = self._safe_get(url, params={"file": payload})
             if r and "root:x:0:0" in r.text:
-                self.add_finding("Path Traversal", "HIGH", "Sunucu /etc/passwd döndürdü.", "Dosya yollarını kısıtlayın.")
+                self.add_finding(
+                    "Path Traversal", "HIGH",
+                    "Sunucu /etc/passwd döndürdü.",
+                    "Dosya yollarını kısıtlayın."
+                )
                 self._log("[✗] Path Traversal açığı bulundu!")
                 return
         self._log("[✓] Path Traversal tespit edilmedi.")
@@ -113,10 +144,15 @@ class WebShieldScanner:
         for path in paths:
             r = self._safe_get(f"{url.rstrip('/')}/{path}")
             if r and r.status_code == 200 and len(r.text) > 10:
-                self.add_finding(f"Hassas Dosya: {path}", "HIGH", f"{path} herkese açık.", "Dosyayı gizleyin.")
+                self.add_finding(
+                    f"Hassas Dosya: {path}", "HIGH",
+                    f"{path} herkese açık.",
+                    "Dosyayı gizleyin veya erişimi engelleyin."
+                )
                 self._log(f"[✗] Bulundu: {path}")
                 found = True
-        if not found: self._log("[✓] Hassas dosya sızıntısı yok.")
+        if not found:
+            self._log("[✓] Hassas dosya sızıntısı yok.")
         time.sleep(0.5)
 
     def test_open_redirect(self, url):
@@ -124,7 +160,11 @@ class WebShieldScanner:
         self._log("[i] Open Redirect denemeleri yapılıyor...")
         r = self._safe_get(url, params={"next": "https://evil.com"}, allow_redirects=False)
         if r and r.status_code in (301, 302) and "evil.com" in r.headers.get("Location", ""):
-            self.add_finding("Open Redirect", "MEDIUM", "Dış URL'ye yönlendirme yapıldı.", "Whitelist kullanın.")
+            self.add_finding(
+                "Open Redirect", "MEDIUM",
+                "Dış URL'ye yönlendirme yapıldı.",
+                "İzin verilen URL'leri whitelist ile kısıtlayın."
+            )
             self._log("[✗] Open Redirect bulundu!")
         else:
             self._log("[✓] Open Redirect tespit edilmedi.")
@@ -135,7 +175,11 @@ class WebShieldScanner:
         self._log("[i] Command Injection test ediliyor...")
         r = self._safe_get(url, params={"cmd": "; id"})
         if r and "uid=" in r.text:
-            self.add_finding("Command Injection", "HIGH", "Sunucu komut çalıştırdı.", "Kullanıcı girdisini izole edin.")
+            self.add_finding(
+                "Command Injection", "HIGH",
+                "Sunucu komut çalıştırdı.",
+                "Kullanıcı girdisini izole edin, subprocess.run kullanmaktan kaçının."
+            )
             self._log("[✗] Command Injection bulundu!")
         else:
             self._log("[✓] Command Injection tespit edilmedi.")
@@ -151,7 +195,11 @@ class WebShieldScanner:
         self._log("[i] CORS inceleniyor...")
         r = self._safe_get(url, headers={"Origin": "https://evil.com"})
         if r and r.headers.get("Access-Control-Allow-Origin") == "*":
-            self.add_finding("Wildcard CORS", "MEDIUM", "Her origin kabul ediliyor.", "Originleri kısıtlayın.")
+            self.add_finding(
+                "Wildcard CORS", "MEDIUM",
+                "Her origin kabul ediliyor.",
+                "Access-Control-Allow-Origin değerini belirli originlerle kısıtlayın."
+            )
             self._log("[!] Wildcard CORS tespit edildi.")
         else:
             self._log("[✓] CORS güvenli.")

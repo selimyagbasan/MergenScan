@@ -213,12 +213,23 @@
       cursor: pointer;
     }
 
+    .btn-scan:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .scanner-actions {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-top: 10px;
       padding: 0 2px;
+    }
+
+    .scanner-hint {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-4);
     }
 
     .btn-modules {
@@ -254,6 +265,12 @@
       display: block;
     }
 
+    .dropdown-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
     .modules-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -287,6 +304,7 @@
       background: var(--paper-3);
       border-radius: 9px;
       position: relative;
+      flex-shrink: 0;
     }
 
     .module-toggle.active .toggle-dot {
@@ -307,6 +325,11 @@
 
     .module-toggle.active .toggle-dot::after {
       transform: translateX(14px);
+    }
+
+    .module-info .name {
+      font-size: 13px;
+      font-weight: 500;
     }
 
     .stats-strip {
@@ -347,10 +370,6 @@
       text-align: center;
     }
 
-    .progress-section.visible {
-      display: block;
-    }
-
     .progress-bar-bg {
       width: 100%;
       max-width: 460px;
@@ -364,6 +383,18 @@
       background: var(--ink);
       width: 0%;
       transition: width 0.5s;
+    }
+
+    .spinner-text {
+      font-family: var(--serif);
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    .spinner-sub {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
     }
 
     .results-section {
@@ -407,6 +438,12 @@
       margin-bottom: 4px;
     }
 
+    .stat-lbl {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-3);
+    }
+
     .stat-red .stat-num {
       color: var(--red);
     }
@@ -436,12 +473,14 @@
       gap: 12px;
       padding: 14px 16px;
       cursor: pointer;
+      user-select: none;
     }
 
     .severity-pip {
       width: 7px;
       height: 7px;
       border-radius: 50%;
+      flex-shrink: 0;
     }
 
     .sev-high {
@@ -504,6 +543,13 @@
       margin-top: 14px;
       font-family: var(--mono);
       font-size: 13px;
+      border-radius: 4px;
+    }
+
+    .remediation {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--ink-2);
     }
 
     .news-section {
@@ -526,12 +572,19 @@
       border-radius: 8px;
       text-decoration: none;
       color: var(--ink);
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+
+    .news-card:hover {
+      box-shadow: var(--shadow-md);
     }
 
     .news-img {
       width: 100%;
       height: 150px;
       object-fit: cover;
+      background: var(--paper-2);
     }
 
     .news-body {
@@ -547,8 +600,10 @@
 </head>
 
 <body>
-  <nav><a href="#" class="logo">
-      <div class="logo-mark">WS</div><span class="logo-text">WebShield</span>
+  <nav>
+    <a href="#" class="logo">
+      <div class="logo-mark">WS</div>
+      <span class="logo-text">WebShield</span>
     </a>
     <div class="nav-badge">
       <div class="nav-badge-dot"></div>Canlı Tarayıcı
@@ -565,7 +620,7 @@
           <div class="scanner-box">
             <input type="text" class="url-input" id="targetUrl" placeholder="https://site-adresi.com"
               onkeydown="if(event.key==='Enter') startScan()">
-            <button class="btn-scan" onclick="startScan()">Tara</button>
+            <button class="btn-scan" id="btnScan" onclick="startScan()">Tara</button>
           </div>
           <div class="scanner-actions">
             <span class="scanner-hint">Enter ile taramayı başlat</span>
@@ -574,9 +629,9 @@
                 onclick="document.getElementById('moduleDropdown').classList.toggle('active')">Modüller</button>
               <div class="dropdown-menu" id="moduleDropdown">
                 <div class="dropdown-header">
-                  <h3>Test Modülleri</h3><button
-                    onclick="document.getElementById('moduleDropdown').classList.remove('active')"
-                    style="background:none;border:none;cursor:pointer">✕</button>
+                  <h3>Test Modülleri</h3>
+                  <button onclick="document.getElementById('moduleDropdown').classList.remove('active')"
+                    style="background:none;border:none;cursor:pointer;font-size:16px">✕</button>
                 </div>
                 <div class="modules-grid" id="modulesGrid"></div>
               </div>
@@ -613,39 +668,101 @@
   </div>
 
   <script>
-    function escapeHTML(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+    /* ── Yardımcı: XSS koruması ── */
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
 
+    /* ── Modül listesi ── */
     const modules = [
-      { id: 'sqli', name: 'SQL Injection', desc: 'Veritabanı açıkları' }, { id: 'xss', name: 'XSS', desc: 'Script enjeksiyonu' },
-      { id: 'csrf', name: 'CSRF', desc: 'Token kontrolü' }, { id: 'headers', name: 'HTTP Headers', desc: 'Güvenlik başlıkları' }
+      { id: 'sqli', name: 'SQL Injection', desc: 'Veritabanı açıkları' },
+      { id: 'xss', name: 'XSS', desc: 'Script enjeksiyonu' },
+      { id: 'csrf', name: 'CSRF', desc: 'Token kontrolü' },
+      { id: 'headers', name: 'HTTP Headers', desc: 'Güvenlik başlıkları' },
+      { id: 'traversal', name: 'Path Traversal', desc: 'Dizin geçişi' },
+      { id: 'files', name: 'Hassas Dosyalar', desc: '.env, .git vb.' },
+      { id: 'redirect', name: 'Open Redirect', desc: 'Yönlendirme açığı' },
+      { id: 'cmdi', name: 'Cmd Injection', desc: 'Komut enjeksiyonu' },
+      { id: 'cors', name: 'CORS', desc: 'Origin politikası' },
+      { id: 'ssl', name: 'SSL/TLS', desc: 'Sertifika kontrolü' },
+      { id: 'waf', name: 'WAF Tespiti', desc: 'Güvenlik duvarı' },
+      { id: 'robots', name: 'Robots/Sitemap', desc: 'Gizli yollar' },
     ];
 
+    /* ── Sayfa yüklenince modülleri oluştur ── */
     document.addEventListener('DOMContentLoaded', () => {
       const grid = document.getElementById('modulesGrid');
-      grid.innerHTML = modules.map(mod => `<label class="module-toggle active" data-module="${mod.id}"><input type="checkbox" checked><div class="toggle-dot"></div><div class="module-info"><div class="name">${mod.name}</div></div></label>`).join('');
+      grid.innerHTML = modules.map(mod =>
+        `<label class="module-toggle active" data-module="${mod.id}">
+          <input type="checkbox" checked>
+          <div class="toggle-dot"></div>
+          <div class="module-info"><div class="name">${mod.name}</div></div>
+        </label>`
+      ).join('');
+
+      /* Toggle tıklaması */
+      grid.addEventListener('click', e => {
+        const toggle = e.target.closest('.module-toggle');
+        if (!toggle) return;
+        toggle.classList.toggle('active');
+        const cb = toggle.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = toggle.classList.contains('active');
+      });
+
       loadNews();
     });
 
+    /* ── Seçili modülleri al ── */
+    function getSelectedModules() {
+      return [...document.querySelectorAll('.module-toggle.active')]
+        .map(el => el.dataset.module)
+        .filter(Boolean);
+    }
+
+    /* ── Haberleri yükle ── */
     async function loadNews() {
       try {
         const res = await fetch('/api/news');
-        if (!res.ok) throw new Error("Hata");
+        if (!res.ok) throw new Error('Hata');
         const data = await res.json();
-        document.getElementById('newsGrid').innerHTML = data.articles.map(a => `<a class="news-card" href="${escapeHTML(a.link)}" target="_blank"><img src="${escapeHTML(a.image)}" class="news-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect width=%22400%22 height=%22200%22 fill=%22%23eeebe7%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2214%22 fill=%22%23b8b4b3%22%3EGörsel Yok%3C/text%3E%3C/svg%3E'"><div class="news-body"><div class="news-title">${escapeHTML(a.title)}</div></div></a>`).join('');
-      } catch (e) { document.getElementById('newsGrid').innerHTML = '<p>Haberler API üzerinden çekilemedi.</p>'; }
+        const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23eeebe7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23b8b4b3'%3EGörsel Yok%3C/text%3E%3C/svg%3E";
+        document.getElementById('newsGrid').innerHTML = data.articles.map(a =>
+          `<a class="news-card" href="${escapeHTML(a.link)}" target="_blank" rel="noopener noreferrer">
+            <img src="${escapeHTML(a.image) || fallbackImg}" class="news-img" loading="lazy"
+              onerror="this.src='${fallbackImg}'">
+            <div class="news-body"><div class="news-title">${escapeHTML(a.title)}</div></div>
+          </a>`
+        ).join('');
+      } catch (e) {
+        document.getElementById('newsGrid').innerHTML = '<p style="color:var(--ink-3);font-family:var(--mono);font-size:13px">Haberler yüklenemedi.</p>';
+      }
     }
 
+    /* ── Taramayı başlat ── FİX: fetch çağrısı ve res scope hatası düzeltildi ── */
     async function startScan() {
       const url = document.getElementById('targetUrl').value.trim();
-      if (!url) return alert("Lütfen URL girin.");
+      if (!url) return alert('Lütfen URL girin.');
 
+      const selectedModules = getSelectedModules();
+      if (selectedModules.length === 0) return alert('Lütfen en az bir modül seçin.');
+
+      /* UI: tarama moduna geç */
       document.getElementById('mainContent').style.display = 'none';
       document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('btnScan').disabled = true;
 
+      let res; // ← FİX: try dışında tanımlandı
       try {
-        const selectedModules = [...document.querySelectorAll('.module-toggle.active input:checked')]
-          .map(el => el.closest('[data-module]').dataset.module);
-        body: JSON.stringify({ url: url, modules: selectedModules })
+        res = await fetch('/api/scan', { // ← FİX: const yerine atama
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url, modules: selectedModules }) // ← FİX: gerçek fetch body
+        });
 
         if (!res.ok) {
           let errMsg = `Sunucu Hatası (${res.status}).`;
@@ -662,32 +779,39 @@
             if (!statusRes.ok) return;
             const statusData = await statusRes.json();
 
-            for (let msg of statusData.messages) {
-              if (msg === "__DONE__") {
+            for (const msg of statusData.messages) {
+              if (msg === '__DONE__') {
                 clearInterval(pollInterval);
                 const resultRes = await fetch('/api/results/' + scanId);
+                if (!resultRes.ok) throw new Error('Sonuç alınamadı.');
                 showResults(await resultRes.json());
-              } else if (msg.startsWith("__PROGRESS__:")) {
-                const pct = msg.split(":")[1];
+              } else if (msg.startsWith('__PROGRESS__:')) {
+                const pct = msg.split(':')[1];
                 document.getElementById('progressFill').style.width = pct + '%';
               } else {
                 document.getElementById('spinnerSub').textContent = '// ' + msg;
               }
             }
-          } catch (e) { }
+          } catch (e) {
+            console.error('Polling hatası:', e);
+          }
         }, 500);
 
       } catch (err) {
         alert('Hata: ' + err.message);
-        location.reload();
+        document.getElementById('btnScan').disabled = false;
+        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('progressSection').style.display = 'none';
       }
     }
 
+    /* ── Sonuçları göster ── */
     function showResults(result) {
       document.getElementById('progressSection').style.display = 'none';
       document.getElementById('resultsSection').classList.add('visible');
 
-      const { findings, counts, score } = result;
+      const { findings = [], counts = {}, score = 0 } = result;
+
       document.getElementById('summaryGrid').innerHTML = `
         <div class="stat-card stat-red"><span class="stat-num">${counts.HIGH || 0}</span><span class="stat-lbl">Yüksek</span></div>
         <div class="stat-card stat-orange"><span class="stat-num">${counts.MEDIUM || 0}</span><span class="stat-lbl">Orta</span></div>
@@ -695,14 +819,22 @@
         <div class="stat-card stat-green"><span class="stat-num">${score}</span><span class="stat-lbl">Skor</span></div>`;
 
       const list = document.getElementById('findingsList');
-      if (findings.length === 0) { list.innerHTML = '<p style="text-align:center; color:green">Açık bulunamadı.</p>'; return; }
+      if (findings.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:var(--green);padding:24px;font-family:var(--mono)">✓ Açık bulunamadı.</p>';
+        return;
+      }
 
       list.innerHTML = findings.map(f => `
         <div class="finding-card">
           <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="finding-title">${escapeHTML(f.title)}</div><span class="severity-tag tag-${f.severity.toLowerCase()}">${f.severity}</span>
+            <div class="severity-pip sev-${(f.severity || 'low').toLowerCase()}"></div>
+            <div class="finding-title">${escapeHTML(f.title)}</div>
+            <span class="severity-tag tag-${(f.severity || 'low').toLowerCase()}">${escapeHTML(f.severity)}</span>
           </div>
-          <div class="finding-body"><div class="finding-detail">${escapeHTML(f.detail)}</div><div class="remediation"><p>${escapeHTML(f.fix)}</p></div></div>
+          <div class="finding-body">
+            <div class="finding-detail">${escapeHTML(f.detail)}</div>
+            <div class="remediation"><p>${escapeHTML(f.fix)}</p></div>
+          </div>
         </div>`).join('');
     }
   </script>
