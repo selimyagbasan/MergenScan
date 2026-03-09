@@ -12,39 +12,6 @@ Kapsamlı web uygulama güvenlik tarayıcısı. Flask tabanlı web arayüzü ile
 
 ---
 
-## 🚀 Kurulum
-
-### 1. Depoyu klonla
-```bash
-git clone https://github.com/kullanici-adin/webshield.git
-cd webshield
-```
-
-### 2. Sanal ortam oluştur
-```bash
-python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
-```
-
-### 3. Bağımlılıkları yükle
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Ortam değişkenlerini ayarla
-```bash
-cp .env.example .env
-# .env dosyasını düzenle
-```
-
-### 5. Çalıştır
-```bash
-python app.py
-# Tarayıcıda aç: http://localhost:5000
-```
-
----
-
 ## 🔒 Güvenlik Özellikleri
 
 | Özellik | Açıklama |
@@ -79,8 +46,6 @@ python app.py
 - Site Crawler
 
 ---
-
-## 🌐 Canlıya Alma (Production)
 
 ### Gunicorn + Nginx (Önerilen)
 ```bash
