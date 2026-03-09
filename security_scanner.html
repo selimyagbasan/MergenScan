@@ -1,100 +1,559 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebShield — Güvenlik Tarayıcı</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,600&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
-<style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    :root {
-      --ink: #111010; --ink-2: #3a3839; --ink-3: #7a7675; --ink-4: #b8b4b3; --ink-5: #dbd7d6;
-      --paper: #f5f3f0; --paper-2: #eeebe7; --paper-3: #e4e0db; --white: #fefefe;
-      --green: #1a6b3a; --green-bg: #eef7f2; --green-border: #c0deca;
-      --amber: #8a5c00; --amber-bg: #fdf6e8; --amber-border: #e0c980;
-      --red: #a51c1c; --red-bg: #fdf0f0; --red-border: #e0b0b0;
-      --blue: #1c4fa5; --blue-bg: #eff4fd; --blue-border: #b0c8e8;
-      --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif; --serif: 'Fraunces', serif;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,600&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    body { background: var(--paper); color: var(--ink); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
-    h1, h2, h3 { font-family: var(--serif); font-weight: 700; letter-spacing: -0.025em; }
-    .container { max-width: 1040px; margin: 0 auto; padding: 0 28px 80px; }
-    nav { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; max-width: 1040px; margin: 0 auto; }
-    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-    .logo-mark { width: 30px; height: 30px; border: 1.5px solid var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-family: var(--mono); font-weight: 600; color: var(--ink); }
-    .logo-text { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); }
-    .nav-badge { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; color: var(--ink-3); border: 1px solid var(--paper-3); padding: 5px 12px; border-radius: 20px; }
-    .nav-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: breathe 2.5s ease-in-out infinite; }
-    @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-    .divider { height: 1px; background: var(--paper-3); margin: 0 28px; }
-    .hero { padding: 64px 0 48px; text-align: center; }
-    .hero-eyebrow { font-family: var(--mono); font-size: 13px; color: var(--ink-3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 22px; }
-    .hero h1 { font-size: clamp(36px, 5.5vw, 66px); font-weight: 600; margin-bottom: 16px; }
-    .hero-sub { font-size: 17px; color: var(--ink-2); max-width: 420px; margin: 0 auto 40px; }
-    .scanner-wrap { max-width: 580px; margin: 0 auto; }
-    .scanner-box { display: flex; align-items: center; gap: 10px; background: var(--white); border: 1px solid var(--paper-3); border-radius: 10px; padding: 7px 7px 7px 18px; box-shadow: var(--shadow-sm); }
-    .url-input { flex: 1; border: none; background: transparent; font-family: var(--mono); font-size: 15px; outline: none; }
-    .btn-scan { background: var(--ink); color: var(--white); border: none; border-radius: 7px; padding: 11px 22px; font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; }
-    .scanner-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 0 2px; }
-    .btn-modules { background: transparent; border: 1px solid var(--paper-3); border-radius: 6px; padding: 6px 12px; font-family: var(--mono); font-size: 13px; color: var(--ink-3); cursor: pointer; }
-    .dropdown-container { position: relative; }
-    .dropdown-menu { display: none; position: absolute; top: 100%; right: 0; background: var(--white); border: 1px solid var(--paper-3); border-radius: 12px; padding: 16px; min-width: 440px; box-shadow: var(--shadow-md); z-index: 100; }
-    .dropdown-menu.active { display: block; }
-    .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top:10px; }
-    .module-toggle { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--paper-3); border-radius: 7px; padding: 10px 12px; cursor: pointer; }
-    .module-toggle.active { border-color: var(--ink-4); background: var(--white); }
-    .module-toggle input { display: none; }
-    .toggle-dot { width: 32px; height: 18px; background: var(--paper-3); border-radius: 9px; position: relative; }
-    .module-toggle.active .toggle-dot { background: var(--ink); }
-    .toggle-dot::after { content: ''; position: absolute; width: 12px; height: 12px; background: var(--white); border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s; }
-    .module-toggle.active .toggle-dot::after { transform: translateX(14px); }
-    .stats-strip { display: flex; justify-content: center; border-top: 1px solid var(--paper-3); border-bottom: 1px solid var(--paper-3); margin-top: 56px; }
-    .stat-item { flex: 1; text-align: center; padding: 20px; border-right: 1px solid var(--paper-3); }
-    .stat-item:last-child { border-right: none; }
-    .stat-num { font-family: var(--serif); font-size: 28px; font-weight: 700; display: block; }
-    .stat-label { font-family: var(--mono); font-size: 12px; color: var(--ink-4); }
-    
-    .progress-section { display: none; padding: 64px 0; text-align:center; }
-    .progress-section.visible { display: block; }
-    .progress-bar-bg { width: 100%; max-width: 460px; height: 3px; background: var(--paper-3); margin: 0 auto 32px; }
-    .progress-bar-fill { height: 100%; background: var(--ink); width: 0%; transition: width 0.5s; }
-    
-    .results-section { display: none; }
-    .results-section.visible { display: block; }
-    .results-top { display: flex; justify-content: space-between; margin-bottom: 32px; }
-    .results-title { font-family: var(--serif); font-size: 30px; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; }
-    .stat-card { background: var(--white); border: 1px solid var(--paper-3); border-radius: 8px; padding: 16px; text-align: center; }
-    .stat-card .stat-num { font-size: 30px; font-weight: 700; display: block; margin-bottom: 4px; }
-    .stat-red .stat-num { color: var(--red); } .stat-orange .stat-num { color: var(--amber); } .stat-blue .stat-num { color: var(--blue); } .stat-green .stat-num { color: var(--green); }
-    
-    .finding-card { background: var(--white); border: 1px solid var(--paper-3); border-radius: 8px; margin-bottom: 8px; }
-    .finding-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
-    .severity-pip { width: 7px; height: 7px; border-radius: 50%; }
-    .sev-high { background: var(--red); } .sev-medium { background: var(--amber); } .sev-low { background: var(--blue); } .sev-pass { background: var(--green); }
-    .finding-title { font-weight: 600; flex: 1; }
-    .severity-tag { font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 3px; }
-    .tag-high { background: var(--red-bg); color: var(--red); } .tag-medium { background: var(--amber-bg); color: var(--amber); } .tag-low { background: var(--blue-bg); color: var(--blue); }
-    .finding-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--paper-2); }
-    .finding-card.open .finding-body { display: block; }
-    .finding-detail { background: var(--paper); padding: 12px; margin-top: 14px; font-family: var(--mono); font-size: 13px; }
-    
-    .news-section { border-top: 1px solid var(--paper-3); padding-top: 56px; margin-top: 56px; }
-    .news-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-    .news-card { display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--paper-3); border-radius: 8px; text-decoration: none; color: var(--ink); }
-    .news-img { width: 100%; height: 150px; object-fit: cover; }
-    .news-body { padding: 14px; }
-    .news-title { font-weight: 600; font-size: 15px; margin-bottom: 5px; }
-</style>
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    :root {
+      --ink: #111010;
+      --ink-2: #3a3839;
+      --ink-3: #7a7675;
+      --ink-4: #b8b4b3;
+      --ink-5: #dbd7d6;
+      --paper: #f5f3f0;
+      --paper-2: #eeebe7;
+      --paper-3: #e4e0db;
+      --white: #fefefe;
+      --green: #1a6b3a;
+      --green-bg: #eef7f2;
+      --green-border: #c0deca;
+      --amber: #8a5c00;
+      --amber-bg: #fdf6e8;
+      --amber-border: #e0c980;
+      --red: #a51c1c;
+      --red-bg: #fdf0f0;
+      --red-border: #e0b0b0;
+      --blue: #1c4fa5;
+      --blue-bg: #eff4fd;
+      --blue-border: #b0c8e8;
+      --mono: 'DM Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+      --serif: 'Fraunces', serif;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: var(--serif);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 28px 80px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 28px;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 30px;
+      height: 30px;
+      border: 1.5px solid var(--ink);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-family: var(--mono);
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .logo-text {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .nav-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+      border: 1px solid var(--paper-3);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    .nav-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.35;
+      }
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--paper-3);
+      margin: 0 28px;
+    }
+
+    .hero {
+      padding: 64px 0 48px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 5.5vw, 66px);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--ink-2);
+      max-width: 420px;
+      margin: 0 auto 40px;
+    }
+
+    .scanner-wrap {
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    .scanner-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 10px;
+      padding: 7px 7px 7px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .url-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: var(--mono);
+      font-size: 15px;
+      outline: none;
+    }
+
+    .btn-scan {
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      border-radius: 7px;
+      padding: 11px 22px;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .scanner-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding: 0 2px;
+    }
+
+    .btn-modules {
+      background: transparent;
+      border: 1px solid var(--paper-3);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+      cursor: pointer;
+    }
+
+    .dropdown-container {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 12px;
+      padding: 16px;
+      min-width: 440px;
+      box-shadow: var(--shadow-md);
+      z-index: 100;
+    }
+
+    .dropdown-menu.active {
+      display: block;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .module-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--paper);
+      border: 1px solid var(--paper-3);
+      border-radius: 7px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .module-toggle.active {
+      border-color: var(--ink-4);
+      background: var(--white);
+    }
+
+    .module-toggle input {
+      display: none;
+    }
+
+    .toggle-dot {
+      width: 32px;
+      height: 18px;
+      background: var(--paper-3);
+      border-radius: 9px;
+      position: relative;
+    }
+
+    .module-toggle.active .toggle-dot {
+      background: var(--ink);
+    }
+
+    .toggle-dot::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: var(--white);
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+    }
+
+    .module-toggle.active .toggle-dot::after {
+      transform: translateX(14px);
+    }
+
+    .stats-strip {
+      display: flex;
+      justify-content: center;
+      border-top: 1px solid var(--paper-3);
+      border-bottom: 1px solid var(--paper-3);
+      margin-top: 56px;
+    }
+
+    .stat-item {
+      flex: 1;
+      text-align: center;
+      padding: 20px;
+      border-right: 1px solid var(--paper-3);
+    }
+
+    .stat-item:last-child {
+      border-right: none;
+    }
+
+    .stat-num {
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 700;
+      display: block;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-4);
+    }
+
+    .progress-section {
+      display: none;
+      padding: 64px 0;
+      text-align: center;
+    }
+
+    .progress-section.visible {
+      display: block;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      max-width: 460px;
+      height: 3px;
+      background: var(--paper-3);
+      margin: 0 auto 32px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--ink);
+      width: 0%;
+      transition: width 0.5s;
+    }
+
+    .results-section {
+      display: none;
+    }
+
+    .results-section.visible {
+      display: block;
+    }
+
+    .results-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .results-title {
+      font-family: var(--serif);
+      font-size: 30px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-card .stat-num {
+      font-size: 30px;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .stat-red .stat-num {
+      color: var(--red);
+    }
+
+    .stat-orange .stat-num {
+      color: var(--amber);
+    }
+
+    .stat-blue .stat-num {
+      color: var(--blue);
+    }
+
+    .stat-green .stat-num {
+      color: var(--green);
+    }
+
+    .finding-card {
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .finding-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+    }
+
+    .severity-pip {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .sev-high {
+      background: var(--red);
+    }
+
+    .sev-medium {
+      background: var(--amber);
+    }
+
+    .sev-low {
+      background: var(--blue);
+    }
+
+    .sev-pass {
+      background: var(--green);
+    }
+
+    .finding-title {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .severity-tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 3px;
+    }
+
+    .tag-high {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .tag-medium {
+      background: var(--amber-bg);
+      color: var(--amber);
+    }
+
+    .tag-low {
+      background: var(--blue-bg);
+      color: var(--blue);
+    }
+
+    .finding-body {
+      display: none;
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--paper-2);
+    }
+
+    .finding-card.open .finding-body {
+      display: block;
+    }
+
+    .finding-detail {
+      background: var(--paper);
+      padding: 12px;
+      margin-top: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .news-section {
+      border-top: 1px solid var(--paper-3);
+      padding-top: 56px;
+      margin-top: 56px;
+    }
+
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .news-card {
+      display: flex;
+      flex-direction: column;
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .news-img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+
+    .news-body {
+      padding: 14px;
+    }
+
+    .news-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 5px;
+    }
+  </style>
 </head>
 
 <body>
-  <nav><a href="#" class="logo"><div class="logo-mark">WS</div><span class="logo-text">WebShield</span></a><div class="nav-badge"><div class="nav-badge-dot"></div>Canlı Tarayıcı</div></nav>
+  <nav><a href="#" class="logo">
+      <div class="logo-mark">WS</div><span class="logo-text">WebShield</span>
+    </a>
+    <div class="nav-badge">
+      <div class="nav-badge-dot"></div>Canlı Tarayıcı
+    </div>
+  </nav>
   <div class="divider"></div>
 
   <div class="container">
@@ -104,15 +563,21 @@
         <h1>Siteniz <em>ne kadar</em> güvenli?</h1>
         <div class="scanner-wrap">
           <div class="scanner-box">
-            <input type="text" class="url-input" id="targetUrl" placeholder="https://site-adresi.com" onkeydown="if(event.key==='Enter') startScan()">
+            <input type="text" class="url-input" id="targetUrl" placeholder="https://site-adresi.com"
+              onkeydown="if(event.key==='Enter') startScan()">
             <button class="btn-scan" onclick="startScan()">Tara</button>
           </div>
           <div class="scanner-actions">
             <span class="scanner-hint">Enter ile taramayı başlat</span>
             <div class="dropdown-container">
-              <button class="btn-modules" onclick="document.getElementById('moduleDropdown').classList.toggle('active')">Modüller</button>
+              <button class="btn-modules"
+                onclick="document.getElementById('moduleDropdown').classList.toggle('active')">Modüller</button>
               <div class="dropdown-menu" id="moduleDropdown">
-                <div class="dropdown-header"><h3>Test Modülleri</h3><button onclick="document.getElementById('moduleDropdown').classList.remove('active')" style="background:none;border:none;cursor:pointer">✕</button></div>
+                <div class="dropdown-header">
+                  <h3>Test Modülleri</h3><button
+                    onclick="document.getElementById('moduleDropdown').classList.remove('active')"
+                    style="background:none;border:none;cursor:pointer">✕</button>
+                </div>
                 <div class="modules-grid" id="modulesGrid"></div>
               </div>
             </div>
@@ -122,30 +587,37 @@
     </div>
 
     <div class="progress-section" id="progressSection">
-      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
       <div class="spinner-text" id="spinnerText">Taranıyor…</div>
       <div class="spinner-sub" id="spinnerSub">// başlatılıyor</div>
     </div>
 
     <div class="results-section" id="resultsSection">
-      <div class="results-top"><h2 class="results-title">Tarama Sonuçları</h2></div>
+      <div class="results-top">
+        <h2 class="results-title">Tarama Sonuçları</h2>
+      </div>
       <div class="summary-grid" id="summaryGrid"></div>
       <div id="findingsList"></div>
-      <button class="btn-scan" style="margin:20px auto; display:block" onclick="location.reload()">↺ Yeni Tarama</button>
+      <button class="btn-scan" style="margin:20px auto; display:block" onclick="location.reload()">↺ Yeni
+        Tarama</button>
     </div>
 
     <section class="news-section">
       <h2>Dünyadan Teknoloji Haberleri</h2><br>
-      <div class="news-grid" id="newsGrid"><p>Haberler yükleniyor...</p></div>
+      <div class="news-grid" id="newsGrid">
+        <p>Haberler yükleniyor...</p>
+      </div>
     </section>
   </div>
 
   <script>
     function escapeHTML(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
-    
+
     const modules = [
-      { id:'sqli', name:'SQL Injection', desc:'Veritabanı açıkları' }, { id:'xss', name:'XSS', desc:'Script enjeksiyonu' },
-      { id:'csrf', name:'CSRF', desc:'Token kontrolü' }, { id:'headers', name:'HTTP Headers', desc:'Güvenlik başlıkları' }
+      { id: 'sqli', name: 'SQL Injection', desc: 'Veritabanı açıkları' }, { id: 'xss', name: 'XSS', desc: 'Script enjeksiyonu' },
+      { id: 'csrf', name: 'CSRF', desc: 'Token kontrolü' }, { id: 'headers', name: 'HTTP Headers', desc: 'Güvenlik başlıkları' }
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -157,30 +629,30 @@
     async function loadNews() {
       try {
         const res = await fetch('/api/news');
-        if(!res.ok) throw new Error("Hata");
+        if (!res.ok) throw new Error("Hata");
         const data = await res.json();
-        document.getElementById('newsGrid').innerHTML = data.articles.map(a => `<a class="news-card" href="${escapeHTML(a.link)}" target="_blank"><img src="${escapeHTML(a.image)}" class="news-img" onerror="this.src='/static/varsayilan-haber-resmi.jpg'"><div class="news-body"><div class="news-title">${escapeHTML(a.title)}</div></div></a>`).join('');
-      } catch(e) { document.getElementById('newsGrid').innerHTML = '<p>Haberler API üzerinden çekilemedi.</p>'; }
+        document.getElementById('newsGrid').innerHTML = data.articles.map(a => `<a class="news-card" href="${escapeHTML(a.link)}" target="_blank"><img src="${escapeHTML(a.image)}" class="news-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect width=%22400%22 height=%22200%22 fill=%22%23eeebe7%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2214%22 fill=%22%23b8b4b3%22%3EGörsel Yok%3C/text%3E%3C/svg%3E'"><div class="news-body"><div class="news-title">${escapeHTML(a.title)}</div></div></a>`).join('');
+      } catch (e) { document.getElementById('newsGrid').innerHTML = '<p>Haberler API üzerinden çekilemedi.</p>'; }
     }
 
     async function startScan() {
       const url = document.getElementById('targetUrl').value.trim();
       if (!url) return alert("Lütfen URL girin.");
-      
+
       document.getElementById('mainContent').style.display = 'none';
       document.getElementById('progressSection').style.display = 'block';
 
       try {
-        const res = await fetch('/api/scan', {
-          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: url, modules: ['sqli', 'xss', 'csrf', 'headers'] })
-        });
-        
+        const selectedModules = [...document.querySelectorAll('.module-toggle.active input:checked')]
+          .map(el => el.closest('[data-module]').dataset.module);
+        body: JSON.stringify({ url: url, modules: selectedModules })
+
         if (!res.ok) {
-            let errMsg = `Sunucu Hatası (${res.status}).`;
-            try { const errData = await res.json(); errMsg = errData.error || errMsg; } catch(e) {}
-            throw new Error(errMsg);
+          let errMsg = `Sunucu Hatası (${res.status}).`;
+          try { const errData = await res.json(); errMsg = errData.error || errMsg; } catch (e) { }
+          throw new Error(errMsg);
         }
-        
+
         const data = await res.json();
         const scanId = data.scan_id;
 
@@ -189,7 +661,7 @@
             const statusRes = await fetch('/api/status/' + scanId);
             if (!statusRes.ok) return;
             const statusData = await statusRes.json();
-            
+
             for (let msg of statusData.messages) {
               if (msg === "__DONE__") {
                 clearInterval(pollInterval);
@@ -202,10 +674,10 @@
                 document.getElementById('spinnerSub').textContent = '// ' + msg;
               }
             }
-          } catch(e) {}
+          } catch (e) { }
         }, 500);
 
-      } catch(err) {
+      } catch (err) {
         alert('Hata: ' + err.message);
         location.reload();
       }
@@ -214,17 +686,17 @@
     function showResults(result) {
       document.getElementById('progressSection').style.display = 'none';
       document.getElementById('resultsSection').classList.add('visible');
-      
+
       const { findings, counts, score } = result;
       document.getElementById('summaryGrid').innerHTML = `
-        <div class="stat-card stat-red"><span class="stat-num">${counts.HIGH||0}</span><span class="stat-lbl">Yüksek</span></div>
-        <div class="stat-card stat-orange"><span class="stat-num">${counts.MEDIUM||0}</span><span class="stat-lbl">Orta</span></div>
-        <div class="stat-card stat-blue"><span class="stat-num">${counts.LOW||0}</span><span class="stat-lbl">Düşük</span></div>
+        <div class="stat-card stat-red"><span class="stat-num">${counts.HIGH || 0}</span><span class="stat-lbl">Yüksek</span></div>
+        <div class="stat-card stat-orange"><span class="stat-num">${counts.MEDIUM || 0}</span><span class="stat-lbl">Orta</span></div>
+        <div class="stat-card stat-blue"><span class="stat-num">${counts.LOW || 0}</span><span class="stat-lbl">Düşük</span></div>
         <div class="stat-card stat-green"><span class="stat-num">${score}</span><span class="stat-lbl">Skor</span></div>`;
-        
+
       const list = document.getElementById('findingsList');
       if (findings.length === 0) { list.innerHTML = '<p style="text-align:center; color:green">Açık bulunamadı.</p>'; return; }
-      
+
       list.innerHTML = findings.map(f => `
         <div class="finding-card">
           <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
@@ -235,4 +707,5 @@
     }
   </script>
 </body>
+
 </html>
