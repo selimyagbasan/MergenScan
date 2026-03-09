@@ -24,7 +24,7 @@ from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
-app = Flask(__name__, static_folder=".", template_folder=".")
+app = Flask(__name__)
 
 limiter = Limiter(
     get_remote_address,
