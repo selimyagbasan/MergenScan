@@ -300,9 +300,14 @@ NEWS_FEED_URL  = "https://shiftdelete.net/feed"
 NEWS_COUNT     = 10
 
 
-def _fetch_url(url, timeout=6):
+def _fetch_url(url, timeout=8):
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        # Bot korumalarını aşmak için gerçek bir Chrome tarayıcı taklidi yapıyoruz
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+        }
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.read()
     except Exception:
@@ -318,17 +323,33 @@ def _og_image(html_bytes):
 
 
 def _extract_image_from_item(item, NS_MEDIA, NS_CONTENT):
+    # 1. Standart medya etiketi kontrolü
     t = item.find(f"{{{NS_MEDIA}}}thumbnail")
     if t is not None and t.get("url"):
         return t.get("url")
+    t_content = item.find(f"{{{NS_MEDIA}}}content")
+    if t_content is not None and t_content.get("url"):
+        return t_content.get("url")
+        
+    # 2. Enclosure etiketi kontrolü
     e = item.find("enclosure")
     if e is not None and "image" in e.get("type", ""):
         return e.get("url", "")
+        
+    # 3. Metin içi (Content) gömülü resimleri arama
     ce = item.find(f"{{{NS_CONTENT}}}encoded")
     if ce is not None and ce.text:
-        m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', ce.text)
+        m = re.search(r'<img[^>]+src=["\']([^"\']+(?:jpg|jpeg|png|webp|gif))["\']', ce.text, re.IGNORECASE)
         if m:
             return m.group(1)
+            
+    # 4. Description içi resimleri arama
+    desc = item.find("description")
+    if desc is not None and desc.text:
+        m = re.search(r'<img[^>]+src=["\']([^"\']+(?:jpg|jpeg|png|webp|gif))["\']', desc.text, re.IGNORECASE)
+        if m:
+            return m.group(1)
+            
     return ""
 
 
