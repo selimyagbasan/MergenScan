@@ -779,11 +779,18 @@
             if (!statusRes.ok) return;
             const statusData = await statusRes.json();
 
-            for (const msg of statusData.messages) {
+            // Eğer sunucu "Tarama bulunamadı" derse döngüyü durdur
+            if (statusData.status === 'error') {
+              clearInterval(pollInterval);
+              document.getElementById('spinnerSub').textContent = '// Hata: ' + statusData.msg;
+              return;
+            }
+
+            for (const msg of (statusData.messages || [])) {
               if (msg === '__DONE__') {
                 clearInterval(pollInterval);
                 const resultRes = await fetch('/api/results/' + scanId);
-                if (!resultRes.ok) throw new Error('Sonuç alınamadı.');
+                if (!resultRes.ok) throw new Error('Arka planda çöktü (Sonuç kaydedilemedi).');
                 showResults(await resultRes.json());
               } else if (msg.startsWith('__PROGRESS__:')) {
                 const pct = msg.split(':')[1];
@@ -794,6 +801,10 @@
             }
           } catch (e) {
             console.error('Polling hatası:', e);
+            clearInterval(pollInterval);
+            document.getElementById('spinnerText').textContent = 'Tarama Başarısız';
+            document.getElementById('spinnerSub').textContent = '// ' + e.message;
+            document.getElementById('progressFill').style.background = 'var(--red)';
           }
         }, 500);
 
