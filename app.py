@@ -4,6 +4,7 @@
 # =============================================================================
 
 from flask import Flask, request, jsonify, abort
+import requests
 import threading
 import os
 import queue
@@ -83,7 +84,6 @@ def check_api_key():
 # ── Güvenlik Başlıkları ────────────────────────────────────────────────────────
 
 @app.after_request
-@app.after_request
 def add_security_headers(response):
     response.headers["Cache-Control"]             = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"]                    = "no-cache"
@@ -92,7 +92,14 @@ def add_security_headers(response):
     response.headers["X-Frame-Options"]           = "DENY"
     response.headers["Referrer-Policy"]           = "no-referrer"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"]   = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+    response.headers["Content-Security-Policy"] = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self';"
+)
     return response
 
 # ── Tarama Durumu (bellek) ─────────────────────────────────────────────────────
@@ -298,8 +305,13 @@ def get_results(scan_id):
 
 _news_cache    = {"data": [], "ts": 0}
 NEWS_CACHE_TTL = 600
-NEWS_FEED_URL  = "https://shiftdelete.net/feed"
-NEWS_COUNT     = 10
+# app.py içinde — birden fazla kaynak, biri çalışmazsa diğerine geç
+NEWS_FEEDS = [
+    "https://feeds.feedburner.com/TheHackersNews",   # The Hacker News - Siber güvenlik
+    "https://feeds.feedburner.com/securityweek",     # SecurityWeek
+    "https://cloudsecurityalliance.org/blog/feed/",  # Cloud Security Alliance
+]
+NEWS_COUNT = 10
 
 
 def _fetch_url(url, timeout=8):
@@ -369,45 +381,41 @@ def get_news():
     now = time.time()
     if _news_cache["data"] and (now - _news_cache["ts"]) < NEWS_CACHE_TTL:
         return jsonify({"articles": _news_cache["data"]})
-    try:
-        raw = _fetch_url(NEWS_FEED_URL, timeout=8)
-        if not raw:
-            raise Exception("RSS indirilemedi.")
-
-        root    = ET.fromstring(raw)
-        channel = root.find("channel")
-        items   = channel.findall("item") if channel else []
-        articles = []
-
-        for item in items[:NEWS_COUNT]:
-            title_el = item.find("title")
-            link_el  = item.find("link")
-            date_el  = item.find("pubDate")
-            desc_el  = item.find("description")
-
-            title   = title_el.text.strip() if title_el is not None and title_el.text else "Başlıksız"
-            link    = (link_el.text or "").strip() if link_el is not None else "#"
-            date    = date_el.text.strip() if date_el is not None and date_el.text else ""
-            summary = re.sub(r"<[^>]+>", "", desc_el.text).strip()[:200] if desc_el is not None and desc_el.text else ""
-            image   = _extract_image_from_item(
-                item,
-                "http://search.yahoo.com/mrss/",
-                "http://purl.org/rss/1.0/modules/content/"
-            )
-
-            if not image and link and link != "#":
-                image = _og_image(_fetch_url(link, timeout=6))
-
-            articles.append({"title": title, "link": link, "date": date, "summary": summary, "image": image})
-
-        _news_cache["data"] = articles
-        _news_cache["ts"]   = now
-        return jsonify({"articles": articles})
-
-    except Exception as e:
-        if _news_cache["data"]:
-            return jsonify({"articles": _news_cache["data"]})
-        return jsonify({"articles": [], "error": str(e)}), 500
+    
+    for feed_url in NEWS_FEEDS:
+        try:
+            raw = _fetch_url(feed_url, timeout=8)
+            if not raw:
+                continue
+            root    = ET.fromstring(raw)
+            channel = root.find("channel")
+            items   = channel.findall("item") if channel else []
+            if not items:
+                continue
+            articles = []
+            for item in items[:NEWS_COUNT]:
+                title_el = item.find("title")
+                link_el  = item.find("link")
+                date_el  = item.find("pubDate")
+                desc_el  = item.find("description")
+                title   = title_el.text.strip() if title_el is not None and title_el.text else "Başlıksız"
+                link    = (link_el.text or "").strip() if link_el is not None else "#"
+                date    = date_el.text.strip() if date_el is not None and date_el.text else ""
+                summary = re.sub(r"<[^>]+>", "", desc_el.text).strip()[:200] if desc_el is not None and desc_el.text else ""
+                image   = _extract_image_from_item(item, "http://search.yahoo.com/mrss/", "http://purl.org/rss/1.0/modules/content/")
+                if not image and link and link != "#":
+                    image = _og_image(_fetch_url(link, timeout=5))
+                articles.append({"title": title, "link": link, "date": date, "summary": summary, "image": image})
+            
+            _news_cache["data"] = articles
+            _news_cache["ts"]   = now
+            return jsonify({"articles": articles})
+        except Exception:
+            continue
+    
+    if _news_cache["data"]:
+        return jsonify({"articles": _news_cache["data"]})
+    return jsonify({"articles": [], "error": "Haber kaynağına ulaşılamadı."}), 500
 
 
 # ── Başlat ────────────────────────────────────────────────────────────────────
