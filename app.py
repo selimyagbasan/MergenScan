@@ -395,12 +395,9 @@ def get_news():
         return jsonify({"articles": articles})
 
     except Exception as e:
-        import traceback
-        print("\n=== TARAMA ÇÖKTÜ! ===")
-        traceback.print_exc()
-        print("=====================\n")
-        q.put(f"[✗] Tarama hatası: {e}")
-        q.put("__DONE__")
+        if _news_cache["data"]:
+            return jsonify({"articles": _news_cache["data"]})
+        return jsonify({"articles": [], "error": str(e)}), 500
 
 
 # ── Başlat ────────────────────────────────────────────────────────────────────
