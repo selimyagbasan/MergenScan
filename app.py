@@ -83,15 +83,17 @@ def check_api_key():
 # ── Güvenlik Başlıkları ────────────────────────────────────────────────────────
 
 @app.after_request
+@app.after_request
 def add_security_headers(response):
-    response.headers["Cache-Control"]          = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"]                 = "no-cache"
-    response.headers["Expires"]                = "0"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"]        = "DENY"
-    response.headers["Referrer-Policy"]        = "no-referrer"
+    response.headers["Cache-Control"]             = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"]                    = "no-cache"
+    response.headers["Expires"]                   = "0"
+    response.headers["X-Content-Type-Options"]    = "nosniff"
+    response.headers["X-Frame-Options"]           = "DENY"
+    response.headers["Referrer-Policy"]           = "no-referrer"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"]   = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
     return response
-
 
 # ── Tarama Durumu (bellek) ─────────────────────────────────────────────────────
 
@@ -302,14 +304,15 @@ NEWS_COUNT     = 10
 
 def _fetch_url(url, timeout=8):
     try:
-        # Bot korumalarını aşmak için gerçek bir Chrome tarayıcı taklidi yapıyoruz
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
         }
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.read()
+        r = requests.get(url, headers=headers, timeout=timeout, verify=False)
+        if r.status_code == 200:
+            return r.content
+        return None
     except Exception:
         return None
 
@@ -318,8 +321,15 @@ def _og_image(html_bytes):
     if not html_bytes:
         return ""
     html = html_bytes.decode("utf-8", errors="ignore")
-    m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html)
-    return m.group(1) if m else ""
+    # Her iki attribute sırasını da yakala
+    m = re.search(
+        r'<meta[^>]+(?:property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']'
+        r'|content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\'])',
+        html
+    )
+    if m:
+        return m.group(1) or m.group(2)
+    return ""
 
 
 def _extract_image_from_item(item, NS_MEDIA, NS_CONTENT):
