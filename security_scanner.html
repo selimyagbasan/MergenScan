@@ -612,11 +612,240 @@
       font-size: 15px;
       margin-bottom: 5px;
     }
+
+    /* ══ COVER ══ */
+    .cover {
+      position: relative;
+      min-height: 100vh;
+      background: #0c0c0c;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.065) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+    .cover-glow {
+      position: absolute;
+      top: -180px; left: 50%;
+      transform: translateX(-50%);
+      width: 900px; height: 600px;
+      background: radial-gradient(ellipse, rgba(26,107,58,0.2) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .cover-fade {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 200px;
+      background: linear-gradient(to bottom, transparent, #f5f3f0);
+      pointer-events: none;
+      z-index: 5;
+    }
+    .cover-nav {
+      position: relative; z-index: 10;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 22px 40px;
+      max-width: 1040px; margin: 0 auto; width: 100%;
+    }
+    .cover-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+    .cover-logo-mark {
+      width:30px; height:30px;
+      border:1px solid rgba(255,255,255,0.15);
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'DM Mono',monospace; font-size:13px; font-weight:600;
+      color:rgba(255,255,255,0.8);
+    }
+    .cover-logo-text {
+      font-family:'Fraunces',serif; font-size:20px; font-weight:700;
+      color:rgba(255,255,255,0.9);
+    }
+    .cover-badge {
+      display:flex; align-items:center; gap:6px;
+      font-family:'DM Mono',monospace; font-size:12px;
+      color:rgba(255,255,255,0.3);
+      border:1px solid rgba(255,255,255,0.1);
+      padding:5px 13px; border-radius:20px;
+    }
+    .cover-badge-dot {
+      width:6px; height:6px; border-radius:50%;
+      background:#1a6b3a;
+      animation:breathe 2.5s ease-in-out infinite;
+    }
+    .cover-body {
+      position:relative; z-index:10; flex:1;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:40px 28px 130px;
+    }
+    .cover-tag {
+      display:inline-flex; align-items:center; gap:7px;
+      font-family:'DM Mono',monospace; font-size:11px;
+      letter-spacing:.1em; text-transform:uppercase;
+      color:#1a6b3a;
+      border:1px solid rgba(26,107,58,0.3);
+      background:rgba(26,107,58,0.08);
+      padding:5px 14px; border-radius:20px;
+      margin-bottom:32px;
+      animation:coverRise .8s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-tag-dot {
+      width:5px; height:5px; border-radius:50%;
+      background:#1a6b3a;
+      animation:breathe 2.5s ease-in-out infinite;
+    }
+    .cover-title {
+      font-family:'Fraunces',serif;
+      font-size:clamp(44px,6.5vw,84px);
+      font-weight:600; line-height:1.05;
+      letter-spacing:-.03em; color:#fff;
+      margin-bottom:20px;
+      animation:coverRise .8s .07s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-title em { font-style:italic; color:#4ade80; }
+    .cover-desc {
+      font-family:'DM Sans',sans-serif;
+      font-size:16px; color:rgba(255,255,255,0.45);
+      line-height:1.7; max-width:440px;
+      margin-bottom:46px;
+      animation:coverRise .8s .14s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-pills {
+      display:flex; flex-wrap:wrap; justify-content:center;
+      gap:7px; margin-bottom:50px;
+      animation:coverRise .8s .2s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-pill {
+      font-family:'DM Mono',monospace; font-size:11px;
+      padding:4px 12px; border-radius:20px;
+      color:rgba(255,255,255,0.3);
+      border:1px solid rgba(255,255,255,0.07);
+    }
+    .cover-pill.high   { color:#f87171; border-color:rgba(248,113,113,.2); }
+    .cover-pill.medium { color:#fbbf24; border-color:rgba(251,191,36,.2); }
+    .cover-pill.low    { color:#60a5fa; border-color:rgba(96,165,250,.2); }
+    .cover-pill.safe   { color:#4ade80; border-color:rgba(74,222,128,.2); }
+    .cover-cta {
+      display:inline-flex; align-items:center; gap:10px;
+      background:#fff; color:#0c0c0c;
+      border:none; border-radius:8px;
+      padding:13px 26px;
+      font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600;
+      cursor:pointer;
+      transition:background .15s, transform .15s;
+      animation:coverRise .8s .26s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-cta:hover { background:#ece9e5; transform:translateY(-1px); }
+    .cover-arrow {
+      position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+      z-index:10;
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      cursor:pointer;
+      animation:coverRise .8s .38s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-arrow span {
+      font-family:'DM Mono',monospace; font-size:10px;
+      letter-spacing:.1em; text-transform:uppercase;
+      color:rgba(255,255,255,0.18);
+    }
+    .cover-arrow-icon { animation:arrowBounce 2s ease-in-out infinite; }
+    @keyframes arrowBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+    @keyframes coverRise {
+      from{opacity:0;transform:translateY(22px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    .cover-stats {
+      position:relative; z-index:10;
+      display:flex;
+      border-top:1px solid rgba(255,255,255,0.06);
+    }
+    .cover-stat {
+      flex:1; text-align:center; padding:18px;
+      border-right:1px solid rgba(255,255,255,0.06);
+    }
+    .cover-stat:last-child { border-right:none; }
+    .cover-stat-n {
+      display:block;
+      font-family:'DM Mono',monospace; font-size:18px; font-weight:500;
+      color:rgba(255,255,255,0.65); margin-bottom:2px;
+    }
+    .cover-stat-l {
+      font-family:'DM Mono',monospace; font-size:11px;
+      color:rgba(255,255,255,0.22);
+    }
+    @media(max-width:600px){
+      .cover-pills,.cover-stats{display:none;}
+      .cover-nav{padding:16px 20px;}
+    }
   </style>
 </head>
 
 <body>
-  <nav>
+  <!-- ══ COVER ══ -->
+  <div class="cover">
+    <div class="cover-glow"></div>
+    <div class="cover-fade"></div>
+    <nav class="cover-nav">
+      <a href="#" class="cover-logo">
+        <div class="cover-logo-mark">MS</div>
+        <span class="cover-logo-text">MergenScan</span>
+      </a>
+      <div class="cover-badge">
+        <div class="cover-badge-dot"></div>Canlı Tarayıcı
+      </div>
+    </nav>
+    <div class="cover-body">
+      <div class="cover-tag">
+        <span class="cover-tag-dot"></span>Web Güvenlik Tarayıcısı
+      </div>
+      <h1 class="cover-title">
+        Açıklarınızı biz bulmadan<br><em>siz bulun.</em>
+      </h1>
+      <p class="cover-desc">
+        SQL Injection, XSS, CSRF dahil 12 farklı güvenlik testiyle<br>
+        web uygulamanızı saniyeler içinde tarar ve raporlar.
+      </p>
+      <div class="cover-pills">
+        <span class="cover-pill high">SQL Injection</span>
+        <span class="cover-pill high">Cmd Injection</span>
+        <span class="cover-pill high">Path Traversal</span>
+        <span class="cover-pill medium">XSS</span>
+        <span class="cover-pill medium">CSRF</span>
+        <span class="cover-pill medium">Open Redirect</span>
+        <span class="cover-pill low">HTTP Headers</span>
+        <span class="cover-pill low">CORS / SSL</span>
+        <span class="cover-pill safe">WAF Tespiti</span>
+        <span class="cover-pill safe">Hassas Dosyalar</span>
+      </div>
+      <button class="cover-cta" onclick="document.getElementById('appStart').scrollIntoView({behavior:'smooth'})">
+        Taramayı Başlat
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M7.5 2v11M2 8l5.5 5.5L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="cover-arrow" onclick="document.getElementById('appStart').scrollIntoView({behavior:'smooth'})">
+      <span>aşağı kaydır</span>
+      <div class="cover-arrow-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v12M3 9l5 5 5-5" stroke="rgba(255,255,255,0.22)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="cover-stats">
+      <div class="cover-stat"><span class="cover-stat-n">12</span><span class="cover-stat-l">Test Modülü</span></div>
+      <div class="cover-stat"><span class="cover-stat-n">~30s</span><span class="cover-stat-l">Ortalama Süre</span></div>
+      <div class="cover-stat"><span class="cover-stat-n">OWASP</span><span class="cover-stat-l">Top 10 Kapsam</span></div>
+      <div class="cover-stat"><span class="cover-stat-n">0</span><span class="cover-stat-l">Veri Kaydedilmez</span></div>
+    </div>
+  </div>
+
+  <nav id="appStart">
+
     <a href="#" class="logo">
       <div class="logo-mark">MS</div>
       <span class="logo-text">MergenScan</span>
