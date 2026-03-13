@@ -401,6 +401,47 @@ def _extract_image_from_item(item, NS_MEDIA, NS_CONTENT):
             
     return ""
 
+def _translate_titles(titles):
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        return titles
+    try:
+        numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(titles))
+        payload = {
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 1024,
+            "messages": [{
+                "role": "user",
+                "content": (
+                    "Aşağıdaki İngilizce haber başlıklarını Türkçeye çevir. "
+                    "Sadece numaralı listeyi döndür, başka hiçbir şey yazma. "
+                    "Her satır '1. Başlık' formatında olsun.\n\n" + numbered
+                )
+            }]
+        }
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key":         anthropic_key,
+                "anthropic-version": "2023-06-01",
+                "content-type":      "application/json",
+            },
+            json=payload, timeout=15, verify=True
+        )
+        if r.status_code != 200:
+            return titles
+        text = r.json()["content"][0]["text"].strip()
+        translated = []
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if line[0].isdigit() and ". " in line:
+                line = line.split(". ", 1)[1]
+            translated.append(line)
+        return translated if len(translated) == len(titles) else titles
+    except Exception:
+        return titles
 
 @app.route("/api/news", methods=["GET"])
 @limiter.limit("30 per hour")
@@ -433,6 +474,12 @@ def get_news():
                 if not image and link and link != "#":
                     image = _og_image(_fetch_url(link, timeout=5))
                 articles.append({"title": title, "link": link, "date": date, "summary": summary, "image": image})
+                original_titles   = [a["title"] for a in articles]
+            translated_titles = _translate_titles(original_titles)
+            for article, tr_title in zip(articles, translated_titles):
+                article["title"] = tr_title
+
+            _news_cache["data"] = articles
             
             _news_cache["data"] = articles
             _news_cache["ts"]   = now
