@@ -68,9 +68,3 @@ mergenscan/
 ├── .gitignore
 └── README.md
 ```
-
----
-
-## 📄 Lisans
-
-MIT License — Ayrıntılar için `LICENSE` dosyasına bakın.
