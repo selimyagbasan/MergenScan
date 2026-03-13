@@ -9,9 +9,6 @@ import threading
 import os
 import queue
 import time
-import uuid
-import logging
-import bleach
 import socket
 import ipaddress
 import smtplib
@@ -22,9 +19,15 @@ from dotenv import load_dotenv
 import defusedxml.ElementTree as ET
 import urllib.request
 import re
-from concurrent.futures import ThreadPoolExecutor
+import bleach
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import uuid
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -99,7 +102,7 @@ def add_security_headers(response):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline'; "
+    "script-src 'self' 'unsafe-inline' https://unpkg.com; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; "
     "img-src 'self' data: https:; "
@@ -143,8 +146,8 @@ def rate_limit_exceeded(e):
 
 @app.errorhandler(Exception)
 def handle_global_exception(error):
+    logger.exception("Beklenmeyen hata")
     if request.path.startswith("/api/"):
-        logging.exception("Beklenmeyen hata")
         return jsonify({"error": "Beklenmeyen bir sunucu hatası oluştu."}), 500
     return "Sunucu Hatası", 500
 
@@ -200,12 +203,28 @@ def start_scan():
     scan_events[scan_id]     = cancel_event
     scan_timestamps[scan_id] = now
 
-    executor.submit(run_scan, scan_id, url, modules, cancel_event)
+    future = executor.submit(run_scan, scan_id, url, modules, cancel_event)
+
+    def _watch_timeout(fut, sid, limit=120):
+        try:
+            fut.result(timeout=limit)
+        except TimeoutError:
+            if sid in scan_events:
+                scan_events[sid].set()
+            if sid in scan_queues:
+                scan_queues[sid].put("[!] Tarama zaman aşımına uğradı.")
+                scan_queues[sid].put("__DONE__")
+        except Exception:
+            pass
+
+    threading.Thread(target=_watch_timeout, args=(future, scan_id), daemon=True).start()
     return jsonify({"scan_id": scan_id})
 
 
 @app.route("/api/cancel/<scan_id>", methods=["POST"])
 def cancel_scan(scan_id):
+    if not check_api_key():
+        return jsonify({"error": "Yetkisiz erişim"}), 401
     if scan_id in scan_events:
         scan_events[scan_id].set()
         return jsonify({"status": "cancelled"})
@@ -301,6 +320,8 @@ def get_status(scan_id):
 
 @app.route("/api/results/<scan_id>", methods=["GET"])
 def get_results(scan_id):
+    if not check_api_key():
+        return jsonify({"error": "Yetkisiz erişim"}), 401
     result = scan_results.get(scan_id)
     if result:
         return jsonify(result)
@@ -327,7 +348,7 @@ def _fetch_url(url, timeout=8):
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
         }
-        r = requests.get(url, headers=headers, timeout=timeout, verify=False)
+        r = requests.get(url, headers=headers, timeout=timeout, verify=True)
         if r.status_code == 200:
             return r.content
         return None

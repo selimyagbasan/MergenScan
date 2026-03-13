@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
 import time
 import html as html_module
+import socket
+import ipaddress
 import requests
 import urllib3
+from urllib.parse import urlparse
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def _is_ip_safe(host):
+    try:
+        ip = ipaddress.ip_address(socket.gethostbyname(host))
+        return not (ip.is_loopback or ip.is_private or
+                    ip.is_link_local or ip.is_reserved or
+                    ip.is_multicast or ip.is_unspecified)
+    except Exception:
+        return False
 
 class WebShieldScanner:
     def __init__(self, log_callback=None, cancel_event=None):
@@ -12,7 +24,7 @@ class WebShieldScanner:
         self.cancel_event = cancel_event
         self.findings     = []
         self.session = requests.Session()
-        self.session.verify = False
+        self.session.verify = True
         self.session.headers.update({"User-Agent": "WebShield-Scanner/2.0"})
 
     def _log(self, msg):
@@ -28,6 +40,10 @@ class WebShieldScanner:
         self.findings.append({"title": title, "severity": severity, "detail": detail, "fix": fix})
 
     def _safe_get(self, url, timeout=8, **kwargs):
+        host = urlparse(url).hostname or ""
+        if not _is_ip_safe(host):
+            self._log(f"[!] Güvensiz IP, istek engellendi: {url}")
+            return None
         try:
             return self.session.get(url, timeout=timeout, **kwargs)
         except Exception as e:
@@ -84,15 +100,33 @@ class WebShieldScanner:
         self._check_cancel()
         self._log("[i] CSRF korumaları kontrol ediliyor...")
         r = self._safe_get(url)
-        if r and "csrf" not in r.text.lower():
+        if not r:
+            return
+
+        from html.parser import HTMLParser
+        class FormParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.has_csrf = False
+            def handle_starttag(self, tag, attrs):
+                if tag == "input":
+                    d = dict(attrs)
+                    name = (d.get("name") or "").lower()
+                    if "csrf" in name or "token" in name:
+                        self.has_csrf = True
+
+        parser = FormParser()
+        parser.feed(r.text)
+
+        if not parser.has_csrf:
             self.add_finding(
                 "CSRF Token Eksik", "MEDIUM",
-                "Formlarda CSRF token bulunamadı.",
-                "CSRF token ekleyin."
+                "Form input'larında CSRF token alanı bulunamadı.",
+                "Her POST formuna gizli CSRF token alanı ekleyin."
             )
-            self._log("[!] CSRF token eksik olabilir.")
+            self._log("[!] CSRF token eksik.")
         else:
-            self._log("[✓] CSRF koruması mevcut.")
+            self._log("[✓] CSRF token mevcut.")
         time.sleep(0.5)
 
     def test_headers(self, url):
