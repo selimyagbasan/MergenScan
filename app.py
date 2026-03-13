@@ -9,6 +9,9 @@ import threading
 import os
 import queue
 import time
+import uuid
+import logging
+import bleach
 import socket
 import ipaddress
 import smtplib
@@ -35,10 +38,10 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-executor = ThreadPoolExecutor(max_workers=3)
+executor = ThreadPoolExecutor(max_workers=5)
 
 API_KEY      = os.environ.get("WEBSHIELD_API_KEY", "")
-REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "false").lower() == "true"
+REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "true").lower() == "true"
 
 # ── URL Güvenlik Kontrolü ──────────────────────────────────────────────────────
 
@@ -141,7 +144,8 @@ def rate_limit_exceeded(e):
 @app.errorhandler(Exception)
 def handle_global_exception(error):
     if request.path.startswith("/api/"):
-        return jsonify({"error": f"Sunucu İçi Hata: {str(error)}"}), 500
+        logging.exception("Beklenmeyen hata")
+        return jsonify({"error": "Beklenmeyen bir sunucu hatası oluştu."}), 500
     return "Sunucu Hatası", 500
 
 
@@ -189,7 +193,7 @@ def start_scan():
         scan_events.pop(sid, None)
         scan_timestamps.pop(sid, None)
 
-    scan_id                  = str(int(now * 1000))
+    scan_id                  = str(uuid.uuid4())
     scan_queues[scan_id]     = queue.Queue()
     scan_results[scan_id]    = None
     cancel_event             = threading.Event()
@@ -403,7 +407,7 @@ def get_news():
                 title   = title_el.text.strip() if title_el is not None and title_el.text else "Başlıksız"
                 link    = (link_el.text or "").strip() if link_el is not None else "#"
                 date    = date_el.text.strip() if date_el is not None and date_el.text else ""
-                summary = re.sub(r"<[^>]+>", "", desc_el.text).strip()[:200] if desc_el is not None and desc_el.text else ""
+                summary = bleach.clean(desc_el.text or "", tags=[], strip=True).strip()[:200] if desc_el is not None and desc_el.text else ""
                 image   = _extract_image_from_item(item, "http://search.yahoo.com/mrss/", "http://purl.org/rss/1.0/modules/content/")
                 if not image and link and link != "#":
                     image = _og_image(_fetch_url(link, timeout=5))
