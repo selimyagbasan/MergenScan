@@ -257,8 +257,24 @@
       border-radius: 12px;
       padding: 16px;
       min-width: 440px;
+      max-width: 95vw;
       box-shadow: var(--shadow-md);
       z-index: 100;
+    }
+
+    @media (max-width: 480px) {
+      .dropdown-menu {
+        min-width: unset;
+        width: calc(100vw - 40px);
+        /* ekran genişliği - kenar boşlukları */
+        right: -10px;
+        /* sağa taşmasın */
+      }
+
+      .modules-grid {
+        grid-template-columns: 1fr;
+        /* tek sütun olsun */
+      }
     }
 
     .dropdown-menu.active {
