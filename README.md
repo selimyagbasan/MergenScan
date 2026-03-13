@@ -1,4 +1,4 @@
-# 🛡 WebShield — Web Güvenlik Tarayıcısı
+# 🛡 MergenScan — Web Güvenlik Tarayıcısı
 
 Kapsamlı web uygulama güvenlik tarayıcısı. Flask tabanlı web arayüzü ile SQL Injection, XSS, CORS, SSL ve daha fazlasını test eder.
 
@@ -59,7 +59,7 @@ Nginx yapılandırması için `DEPLOY.md` dosyasına bakın.
 ## 📁 Proje Yapısı
 
 ```
-webshield/
+mergenscan/
 ├── app.py                 # Flask web sunucusu
 ├── scanner.py             # Güvenlik test modülleri
 ├── security_scanner.html  # Web arayüzü
