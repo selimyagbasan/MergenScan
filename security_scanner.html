@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebShield — Güvenlik Tarayıcı</title>
+  <title>MergenScan — Güvenlik Tarayıcı</title>
   <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
   <link
@@ -602,8 +602,8 @@
 <body>
   <nav>
     <a href="#" class="logo">
-      <div class="logo-mark">WS</div>
-      <span class="logo-text">WebShield</span>
+      <div class="logo-mark">MS</div>
+      <span class="logo-text">MergenScan</span>
     </a>
     <div class="nav-badge">
       <div class="nav-badge-dot"></div>Canlı Tarayıcı
@@ -614,8 +614,10 @@
   <div class="container">
     <div id="mainContent">
       <section class="hero">
-        <div class="hero-eyebrow">Web Güvenlik Tarayıcısı</div>
-        <h1>Siteniz <em>ne kadar</em> güvenli?</h1>
+        <div class="hero-eyebrow">Güvenlik Taraması</div>
+        <h1>Web uygulamanızdaki açıkları <em>tespit edin.</em></h1>
+        <p class="hero-sub">SQL Injection, XSS, CSRF dahil 12 farklı testle güvenlik açıklarını otomatik olarak tarar ve
+          raporlar.</p>
         <div class="scanner-wrap">
           <div class="scanner-box">
             <input type="text" class="url-input" id="targetUrl" placeholder="https://site-adresi.com"
@@ -660,7 +662,7 @@
     </div>
 
     <section class="news-section">
-      <h2>Dünyadan Teknoloji Haberleri</h2><br>
+      <h2>Güvenlik Haberleri</h2><br>
       <div class="news-grid" id="newsGrid">
         <p>Haberler yükleniyor...</p>
       </div>
@@ -849,6 +851,12 @@
         </div>`).join('');
     }
   </script>
+  <footer
+    style="border-top:1px solid var(--paper-3);margin-top:60px;padding:24px 28px;max-width:1040px;margin-left:auto;margin-right:auto;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12px;color:var(--ink-4)">
+    <span>© 2025 MergenScan — Tüm hakları saklıdır.</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="color:var(--green);font-size:8px">●</span>
+      Aktif</span>
+  </footer>
 </body>
 
 </html>

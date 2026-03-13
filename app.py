@@ -11,6 +11,8 @@ import queue
 import time
 import socket
 import ipaddress
+import smtplib
+from email.mime.text import MIMEText
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
