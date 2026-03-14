@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# FİX: static_folder="." kaldırıldı — kaynak kod sızıntısı riski giderildi
 app = Flask(__name__)
 
 limiter = Limiter(
@@ -101,13 +100,13 @@ def add_security_headers(response):
     response.headers["Referrer-Policy"]           = "no-referrer"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
-    "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://unpkg.com; "
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-    "font-src 'self' https://fonts.gstatic.com; "
-    "img-src 'self' data: https:; "
-    "connect-src 'self' https://unpkg.com;"
-)
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://unpkg.com;"
+    )
     return response
 
 # ── Tarama Durumu (bellek) ─────────────────────────────────────────────────────
@@ -287,11 +286,17 @@ def run_scan(scan_id, url, modules, cancel_event):
             counts[f.get("severity", "LOW")] += 1
 
         score = max(0, 100 - counts["HIGH"] * 20 - counts["MEDIUM"] * 5 - counts["LOW"] * 1)
+
+        # FİX: scan_results önce set edilir, sonra __DONE__ kuyruğa eklenir
+        # Böylece frontend sonucu istediğinde her zaman hazır olur
         scan_results[scan_id] = {"findings": findings, "counts": counts, "score": score}
         q.put("__DONE__")
 
     except Exception as e:
         q.put(f"[✗] Tarama hatası: {e}")
+        # FİX: Hata durumunda da boş sonuç set edilir, None kalmaması için
+        if scan_results.get(scan_id) is None:
+            scan_results[scan_id] = {"findings": [], "counts": {"HIGH": 0, "MEDIUM": 0, "LOW": 0}, "score": 100}
         q.put("__DONE__")
 
 
@@ -302,6 +307,11 @@ def run_scan(scan_id, url, modules, cancel_event):
 def get_status(scan_id):
     q = scan_queues.get(scan_id)
     if not q:
+        # FİX: Kuyruk silinmiş ama sonuç varsa → tarama tamamlandı demektir, hata değil
+        # Eski kodda burada "Tarama bulunamadı" dönüyordu ve frontend bozuluyordu
+        result = scan_results.get(scan_id)
+        if result is not None:
+            return jsonify({"status": "ok", "messages": ["__DONE__"], "done": True})
         return jsonify({"status": "error", "msg": "Tarama bulunamadı"})
 
     msgs = []
@@ -313,6 +323,7 @@ def get_status(scan_id):
 
     is_done = "__DONE__" in msgs
     if is_done:
+        # FİX: Kuyruk yalnızca __DONE__ geldikten sonra temizlenir
         scan_queues.pop(scan_id, None)
 
     return jsonify({"status": "ok", "messages": msgs, "done": is_done})
@@ -323,20 +334,20 @@ def get_results(scan_id):
     if not check_api_key():
         return jsonify({"error": "Yetkisiz erişim"}), 401
     result = scan_results.get(scan_id)
-    if result:
+    if result is not None:
         return jsonify(result)
-    return jsonify({"error": "Sonuç bulunamadı"}), 404
+    # FİX: 404 yerine 202 → frontend "henüz hazır değil" olarak yorumlar, crash olmaz
+    return jsonify({"error": "Sonuç henüz hazır değil"}), 202
 
 
 # ── Haberler ──────────────────────────────────────────────────────────────────
 
 _news_cache    = {"data": [], "ts": 0}
 NEWS_CACHE_TTL = 600
-# app.py içinde — birden fazla kaynak, biri çalışmazsa diğerine geç
 NEWS_FEEDS = [
-    "https://feeds.feedburner.com/TheHackersNews",   # The Hacker News - Siber güvenlik
-    "https://feeds.feedburner.com/securityweek",     # SecurityWeek
-    "https://cloudsecurityalliance.org/blog/feed/",  # Cloud Security Alliance
+    "https://feeds.feedburner.com/TheHackersNews",
+    "https://feeds.feedburner.com/securityweek",
+    "https://cloudsecurityalliance.org/blog/feed/",
 ]
 NEWS_COUNT = 10
 
@@ -360,7 +371,6 @@ def _og_image(html_bytes):
     if not html_bytes:
         return ""
     html = html_bytes.decode("utf-8", errors="ignore")
-    # Her iki attribute sırasını da yakala
     m = re.search(
         r'<meta[^>]+(?:property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']'
         r'|content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\'])',
@@ -372,34 +382,27 @@ def _og_image(html_bytes):
 
 
 def _extract_image_from_item(item, NS_MEDIA, NS_CONTENT):
-    # 1. Standart medya etiketi kontrolü
     t = item.find(f"{{{NS_MEDIA}}}thumbnail")
     if t is not None and t.get("url"):
         return t.get("url")
     t_content = item.find(f"{{{NS_MEDIA}}}content")
     if t_content is not None and t_content.get("url"):
         return t_content.get("url")
-        
-    # 2. Enclosure etiketi kontrolü
     e = item.find("enclosure")
     if e is not None and "image" in e.get("type", ""):
         return e.get("url", "")
-        
-    # 3. Metin içi (Content) gömülü resimleri arama
     ce = item.find(f"{{{NS_CONTENT}}}encoded")
     if ce is not None and ce.text:
         m = re.search(r'<img[^>]+src=["\']([^"\']+(?:jpg|jpeg|png|webp|gif))["\']', ce.text, re.IGNORECASE)
         if m:
             return m.group(1)
-            
-    # 4. Description içi resimleri arama
     desc = item.find("description")
     if desc is not None and desc.text:
         m = re.search(r'<img[^>]+src=["\']([^"\']+(?:jpg|jpeg|png|webp|gif))["\']', desc.text, re.IGNORECASE)
         if m:
             return m.group(1)
-            
     return ""
+
 
 def _translate_titles(titles):
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -443,13 +446,14 @@ def _translate_titles(titles):
     except Exception:
         return titles
 
+
 @app.route("/api/news", methods=["GET"])
 @limiter.limit("30 per hour")
 def get_news():
     now = time.time()
     if _news_cache["data"] and (now - _news_cache["ts"]) < NEWS_CACHE_TTL:
         return jsonify({"articles": _news_cache["data"]})
-    
+
     for feed_url in NEWS_FEEDS:
         try:
             raw = _fetch_url(feed_url, timeout=8)
@@ -474,19 +478,18 @@ def get_news():
                 if not image and link and link != "#":
                     image = _og_image(_fetch_url(link, timeout=5))
                 articles.append({"title": title, "link": link, "date": date, "summary": summary, "image": image})
-                original_titles   = [a["title"] for a in articles]
+
+            original_titles   = [a["title"] for a in articles]
             translated_titles = _translate_titles(original_titles)
             for article, tr_title in zip(articles, translated_titles):
                 article["title"] = tr_title
 
             _news_cache["data"] = articles
-            
-            _news_cache["data"] = articles
             _news_cache["ts"]   = now
             return jsonify({"articles": articles})
         except Exception:
             continue
-    
+
     if _news_cache["data"]:
         return jsonify({"articles": _news_cache["data"]})
     return jsonify({"articles": [], "error": "Haber kaynağına ulaşılamadı."}), 500

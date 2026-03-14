@@ -990,7 +990,7 @@
       }
     }
 
-    /* ── Taramayı başlat ── FİX: fetch çağrısı ve res scope hatası düzeltildi ── */
+    /* ── Taramayı başlat ── */
     async function startScan() {
       const url = document.getElementById('targetUrl').value.trim();
       if (!url) return alert('Lütfen URL girin.');
@@ -1003,12 +1003,11 @@
       document.getElementById('progressSection').style.display = 'block';
       document.getElementById('btnScan').disabled = true;
 
-      let res; // ← FİX: try dışında tanımlandı
       try {
-        res = await fetch('/api/scan', { // ← FİX: const yerine atama
+        const res = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url, modules: selectedModules }) // ← FİX: gerçek fetch body
+          body: JSON.stringify({ url: url, modules: selectedModules })
         });
 
         if (!res.ok) {
@@ -1026,7 +1025,8 @@
             if (!statusRes.ok) return;
             const statusData = await statusRes.json();
 
-            // Eğer sunucu "Tarama bulunamadı" derse döngüyü durdur
+            // FİX: "error" durumu yalnızca gerçek hatalarda tetiklenir.
+            // Kuyruk silinmiş ama sonuç hazırsa sunucu artık __DONE__ döndürür (hata değil).
             if (statusData.status === 'error') {
               clearInterval(pollInterval);
               document.getElementById('spinnerSub').textContent = '// Hata: ' + statusData.msg;
@@ -1036,9 +1036,20 @@
             for (const msg of (statusData.messages || [])) {
               if (msg === '__DONE__') {
                 clearInterval(pollInterval);
+                // FİX: race condition — scan_results'ın yazılması için kısa bekleme
+                await new Promise(resolve => setTimeout(resolve, 300));
                 const resultRes = await fetch('/api/results/' + scanId);
-                if (!resultRes.ok) throw new Error('Arka planda çöktü (Sonuç kaydedilemedi).');
-                showResults(await resultRes.json());
+                // FİX: 202 = sonuç henüz hazır değil, kısa gecikme sonrası bir kez daha dene
+                if (resultRes.status === 202) {
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  const retryRes = await fetch('/api/results/' + scanId);
+                  if (!retryRes.ok) throw new Error('Sonuç alınamadı.');
+                  showResults(await retryRes.json());
+                } else if (!resultRes.ok) {
+                  throw new Error('Sonuç alınamadı.');
+                } else {
+                  showResults(await resultRes.json());
+                }
               } else if (msg.startsWith('__PROGRESS__:')) {
                 const pct = msg.split(':')[1];
                 document.getElementById('progressFill').style.width = pct + '%';
