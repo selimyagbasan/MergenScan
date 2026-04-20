@@ -1,336 +1,1118 @@
 <!DOCTYPE html>
+<html lang="tr">
 
-<html class="light" lang="tr"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>MergenScan - Yeni Nesil Siber Güvenlik</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "on-error-container": "#410002",
-                        "surface-container-low": "#f3f3f4",
-                        "outline-variant": "#c6c6c6",
-                        "surface-bright": "#f9f9f9",
-                        "error-container": "#ffdad6",
-                        "surface-container-highest": "#e2e2e2",
-                        "on-secondary-fixed-variant": "#3c3b3b",
-                        "on-primary-fixed-variant": "#e2e2e2",
-                        "inverse-on-surface": "#f0f1f1",
-                        "background": "#f9f9f9",
-                        "secondary": "#5f5e5e",
-                        "error": "#ba1a1a",
-                        "on-secondary-container": "#1c1b1b",
-                        "outline": "#777777",
-                        "on-tertiary-fixed-variant": "#85f8c4",
-                        "surface-dim": "#dadada",
-                        "on-secondary": "#ffffff",
-                        "on-primary-fixed": "#ffffff",
-                        "on-primary": "#e2e2e2",
-                        "tertiary-fixed": "#006c4a",
-                        "primary-fixed-dim": "#474747",
-                        "on-surface": "#1a1c1c",
-                        "secondary-fixed-dim": "#adabaa",
-                        "surface-tint": "#5e5e5e",
-                        "primary-container": "#3b3b3b",
-                        "surface-container": "#eeeeee",
-                        "inverse-surface": "#2f3131",
-                        "on-secondary-fixed": "#1c1b1b",
-                        "on-tertiary-fixed": "#ffffff",
-                        "on-tertiary-container": "#ffffff",
-                        "on-error": "#ffffff",
-                        "surface": "#f9f9f9",
-                        "primary": "#000000",
-                        "tertiary-fixed-dim": "#005137",
-                        "tertiary-container": "#00855d",
-                        "on-tertiary": "#85f8c4",
-                        "surface-container-high": "#e8e8e8",
-                        "on-background": "#1a1c1c",
-                        "surface-variant": "#e2e2e2",
-                        "on-primary-container": "#ffffff",
-                        "secondary-container": "#d6d4d3",
-                        "surface-container-lowest": "#ffffff",
-                        "tertiary": "#00452e",
-                        "primary-fixed": "#5e5e5e",
-                        "secondary-fixed": "#c8c6c5",
-                        "on-surface-variant": "#474747",
-                        "inverse-primary": "#c6c6c6"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
-                    "fontFamily": {
-                        "headline": ["Inter", "sans-serif"],
-                        "body": ["Inter", "sans-serif"],
-                        "label": ["Inter", "sans-serif"]
-                    }
-                }
-            }
-        }
-    </script>
-<style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass-panel {
-            background-color: rgba(249, 249, 249, 0.8);
-            backdrop-filter: blur(20px);
-        }
-        .ambient-shadow {
-            box-shadow: 0 24px 40px -12px rgba(26, 28, 28, 0.06);
-        }
-        .status-pulse {
-            position: relative;
-            width: 8px;
-            height: 8px;
-            background-color: #00452e;
-            border-radius: 50%;
-        }
-        .status-pulse::after {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            right: -4px;
-            bottom: -4px;
-            border-radius: 50%;
-            background-color: rgba(0, 133, 93, 0.5);
-            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-        }
-        @keyframes pulse-ring {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            80%, 100% { transform: scale(2.5); opacity: 0; }
-        }
-    </style>
-</head>
-<body class="bg-surface text-on-surface antialiased selection:bg-primary selection:text-on-primary">
-<!-- Top Navigation (Generated from JSON guidance) -->
-<nav class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#f9f9f9] dark:bg-slate-950 font-sans tracking-tight text-sm uppercase font-semibold text-black dark:text-white glass-panel border-b border-surface-container-low md:border-none">
-<div class="flex items-center gap-4">
-<img alt="MergenScan Logo" class="h-8 w-auto" src="https://lh3.googleusercontent.com/aida/ADBb0uikeqblBzmA5cfdUSR8usDzOQTNv63t31GI-0JcL9WcRU06_kBxX3bO8kRa9_EsUNoqCeEN1naF5M2m0JfVgFvqG9Nn7L9t5krfQLdSPo85rtctfNPjItGDO_H3-oAcs9KyJ5aBPM8WAZWU2D8vX2dePKJgTIbTSDIy-Vysnnjcby7v0vfxtNtUk7UQ4IxAlfV47A2r77Y4ncUTrTvUq9sdWfXi7SUlXtTdPDvQu5rEQOGPsG3DmYAmBDI"/>
-<span class="text-xl font-black tracking-tighter uppercase hidden md:block">MergenScan</span>
-</div>
-<div class="flex items-center gap-8">
-<button class="bg-primary text-on-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:opacity-90 transition-opacity active:scale-[0.99]" onclick="document.getElementById('targetUrl').focus()">
-                    TARAMAYI BAŞLAT
-                </button>
-</div>
-</nav>
-<main class="w-full">
-<!-- Hero Section -->
-<section class="relative pt-24 pb-32 px-8 md:px-16 max-w-[1600px] mx-auto min-h-[870px] flex flex-col justify-center">
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-<!-- Hero Content -->
-<div class="lg:col-span-7 flex flex-col gap-8 z-10">
-<div class="inline-flex items-center gap-3 bg-surface-container-lowest py-2 px-4 rounded-full self-start ambient-shadow">
-<div class="status-pulse"></div>
-<span class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-tertiary">SİSTEM AKTİF &amp; İZLEMEDE</span>
-</div>
-<h1 class="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface leading-[1.05]">
-                        Yeni Nesil Siber Güvenlik: <br/><span class="text-primary">MergenScan</span>
-</h1>
-<p class="font-body text-lg md:text-xl text-on-surface-variant max-w-2xl leading-relaxed">
-                        Modern altyapılar için mimari savunma. Tehditleri yapısal sükunetle analiz edin, tanımlayın ve etkisiz hale getirin.
-                    </p>
-<!-- Primary Scanner Input -->
-<div class="mt-4 max-w-2xl bg-surface-container-lowest p-2 rounded-sm flex flex-col sm:flex-row gap-2 ambient-shadow">
-<div class="flex-1 relative">
-<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">language</span>
-<input class="w-full bg-surface border-none h-14 pl-12 pr-4 text-base focus:ring-0 focus:border-b focus:border-primary transition-all rounded-sm placeholder:text-on-surface-variant/60 font-body" id="targetUrl" placeholder="Taramak istediğiniz alan adını veya IP adresini girin..." type="text"/>
-</div>
-<button class="bg-primary text-on-primary h-14 px-8 font-bold uppercase tracking-wider text-sm hover:opacity-90 transition-opacity whitespace-nowrap flex items-center justify-center gap-2 rounded-l-sm" id="btnScan" onclick="startScan()">
-<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">radar</span>
-                            ANALİZ ET
-                        </button><button class="bg-primary text-on-primary h-14 w-12 flex items-center justify-center border-l border-white/20 hover:opacity-90 transition-opacity rounded-r-sm">
-<span class="material-symbols-outlined text-xl">keyboard_arrow_down</span>
-</button>
-</div>
-<!-- Progress Section Placeholder -->
-<div id="progressSection" style="display: none;"></div>
-<!-- Results Section Placeholder -->
-<div id="resultsSection" style="display: none;"></div>
-<!-- Trust Metrics -->
-<div class="grid grid-cols-3 gap-8 mt-12 border-t border-surface-container-low pt-8">
-<div>
-<p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">12ms</p>
-<p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">ORT. ÇÖZÜM SÜRESİ</p>
-</div>
-<div>
-<p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">4M+</p>
-<p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">KÜRESEL TESTLER</p>
-</div>
-<div>
-<p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">1.2K</p>
-<p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">AKTİF GÖZLEMCİLER</p>
-</div>
-</div>
-</div>
-<!-- Hero Visual / Bento Grid -->
-<div class="lg:col-span-5 hidden lg:grid grid-cols-2 gap-4 h-[600px] relative">
-<!-- Decorative Background element -->
-<div class="absolute inset-0 bg-surface-container-low rounded-xl -z-10 translate-x-4 translate-y-4"></div>
-<div class="col-span-2 bg-surface-container-lowest rounded-lg p-6 ambient-shadow flex flex-col justify-between">
-<div class="flex justify-between items-start">
-<div>
-<h3 class="font-headline text-sm font-bold text-on-surface uppercase tracking-wide">GERÇEK ZAMANLI TEHDİT HARİTASI</h3>
-<p class="font-label text-xs text-on-surface-variant mt-1">Son 24 Saat İçinde Engellenenler</p>
-</div>
-<span class="material-symbols-outlined text-outline">public</span>
-</div>
-<!-- Abstract Map Visualization Placeholder -->
-<div class="h-48 w-full bg-surface mt-4 rounded-sm relative overflow-hidden" data-alt="Abstract geometric world map representation in light gray tones with subtle glowing green nodes indicating network activity, sleek corporate aesthetic">
-<img alt="Global Network" class="object-cover w-full h-full opacity-60 mix-blend-luminosity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtYC0U-CiCr1kwe0lMCvBGb_7n6hZW0wnNvFoHmrErh1b1f36RNL5eu3AnNmqBaIj3o3QeXrrWc0qr3_StSJnWiu4o9ootbmFp3RgFmJ3g6CST09PJ7Kka_-czNeGAtECmh-WggQKvef80hEdyWHa9suL477uEZ8fQ5TWIewPpXEkg4lEEPhoWOM588FZX5UT7iA2iEkxTCqk6MrE3MDwowpAFhdYUuUdQFq5WZ_9r7bXSSXquVkXdHO7n41r4YjniVjsFGr4aoEM"/>
-<!-- Overlay gradients to make it match the design system -->
-<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent"></div>
-</div>
-</div>
-<div class="col-span-1 bg-surface-container-lowest rounded-lg p-6 ambient-shadow flex flex-col gap-4">
-<span class="material-symbols-outlined text-3xl text-primary mb-auto" style="font-variation-settings: 'FILL' 1;">shield_lock</span>
-<div>
-<p class="font-headline text-2xl font-bold tracking-tighter">Sıfır Gün</p>
-<p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">KORUMA MİMARİSİ</p>
-</div>
-</div>
-<div class="col-span-1 bg-primary rounded-lg p-6 flex flex-col gap-4 shadow-lg">
-<span class="material-symbols-outlined text-3xl text-on-primary mb-auto">data_exploration</span>
-<div>
-<p class="font-headline text-2xl font-bold tracking-tighter text-on-primary">99.9%</p>
-<p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-primary/70 mt-1">SİSTEM DOĞRULUĞU</p>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- News / Blog Section -->
-<section class="py-24 px-8 md:px-16 max-w-[1600px] mx-auto bg-surface">
-<div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-<div class="max-w-xl">
-<h2 class="font-headline text-3xl md:text-4xl font-bold tracking-tighter text-on-surface mb-4">Güvenlik Dünyasından Güncel Haberler</h2>
-<p class="font-body text-on-surface-variant">Siber güvenlik trendleri, yapısal analizler ve sektördeki en son gelişmeleri mimari bir perspektifle inceleyin.</p>
-</div>
-<button class="bg-transparent border border-outline/20 text-on-surface px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
-                    TÜMÜNÜ GÖR
-                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
-</button>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-<!-- News Card 1 -->
-<article class="group bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow flex flex-col cursor-pointer hover:-translate-y-1 transition-transform duration-300">
-<div class="h-56 overflow-hidden relative">
-<img alt="Server Room" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Pristine, brightly lit server room corridor with white cabinets, high-tech architectural feel, clean lines, subtle green LED indicators" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-m-lUFEG7moZGQIZPb5bhizPl8uAsMo_sVhSLTRabSrXoCSOs3Fv0DSLTbDUGfLjugE019I63Wz8F682-pPZA7WRldeV45IREn4ES6-QuUns8GoKKauAvhSnCDELHCDoGpOhPe_AAqUFwjh3FQFBXzqvFpV515oxi4oTsHQEu-48bTXDWEr_4R19kssLMRgmwTQ4LhkfT49UAbnPS6GoZ6m-e3OqR4WEbC-bwer-hvwEHHaUSCTrrh-94_Wo-1T9FZWwEjggq3lU"/>
-<div class="absolute top-4 left-4 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-sm">
-<span class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-primary">ALTYAPI</span>
-</div>
-</div>
-<div class="p-6 flex flex-col flex-1">
-<div class="flex items-center gap-2 mb-3 text-on-surface-variant">
-<span class="material-symbols-outlined text-sm">calendar_today</span>
-<span class="font-label text-xs uppercase tracking-wider">12 EKİM 2023</span>
-</div>
-<h3 class="font-headline text-xl font-bold text-on-surface mb-3 group-hover:text-primary transition-colors">Modern Bulut Mimarilerinde Zero-Trust Yaklaşımı</h3>
-<p class="font-body text-sm text-on-surface-variant line-clamp-3 mb-6">Dağıtık ağ yapılarında güvenliğin temeli olarak kabul edilen zero-trust modellerinin kurumsal altyapılara entegrasyon süreçleri ve mimari zorlukları.</p>
-<div class="mt-auto pt-4 border-t border-surface-container-low flex justify-between items-center">
-<span class="font-label text-xs font-bold uppercase tracking-widest text-primary">DETAYLI İNCELE</span>
-<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
-</div>
-</div>
-</article>
-<!-- News Card 2 -->
-<article class="group bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow flex flex-col cursor-pointer hover:-translate-y-1 transition-transform duration-300">
-<div class="h-56 overflow-hidden relative">
-<img alt="Code Analysis" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Abstract macro shot of architectural blueprints overlapping with binary code projections, minimalist, high contrast black and white with soft light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCs1jA8OldgA0hg1q_Zbau9K69ob4z4L5Isp9iiFASVPScqYT9E_eIVziEmmqRzEZkXzmGFpmrTb5UIwv84RNRrCsfWqbaT4ciht6RreYeH3ExsNCW6Ua5c-OcqUt_5Ce2eXr_JpbdaP-nDXkepgZ26o2l7FgfQvQZlmZQJGYNDG_llgZS4KdRR62cc5BLugf7ipEgLRi57BtZfdwc3lrGOfb9g3i-diBj2JsuLsEiVw1LJkNq0a-FSdm1f3NN-yETFC1_n-t0hD4Q"/>
-<div class="absolute top-4 left-4 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-sm">
-<span class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-primary">TEHDİT ANALİZİ</span>
-</div>
-</div>
-<div class="p-6 flex flex-col flex-1">
-<div class="flex items-center gap-2 mb-3 text-on-surface-variant">
-<span class="material-symbols-outlined text-sm">calendar_today</span>
-<span class="font-label text-xs uppercase tracking-wider">08 EKİM 2023</span>
-</div>
-<h3 class="font-headline text-xl font-bold text-on-surface mb-3 group-hover:text-primary transition-colors">Gelişmiş Sürekli Tehditler (APT) Karşısında Yapısal Savunma</h3>
-<p class="font-body text-sm text-on-surface-variant line-clamp-3 mb-6">Geleneksel savunma hatlarını aşan APT gruplarının kullandığı yeni nesil vektörler ve bu vektörlere karşı alınması gereken mimari önlemler.</p>
-<div class="mt-auto pt-4 border-t border-surface-container-low flex justify-between items-center">
-<span class="font-label text-xs font-bold uppercase tracking-widest text-primary">DETAYLI İNCELE</span>
-<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
-</div>
-</div>
-</article>
-<!-- News Card 3 -->
-<article class="group bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow flex flex-col cursor-pointer hover:-translate-y-1 transition-transform duration-300">
-<div class="h-56 overflow-hidden relative">
-<img alt="Data Center Architecture" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Symmetrical interior of a modern stark white corporate building atrium looking up at a glass ceiling, clean lines, minimalist, bright" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAf0CnQvtaErboyAC1CE6wIIvBF6mZdv3eIGXXFjX2xnpIHlDfytTlEU0mwluQvI9j3Icr8vM5KgCbH5zFGD-kSHyvgq34qF4YRQCOWdIfE-1P9Ss37x7pcDhaa-qOgzMvsLCy2bRnLHD4dt-YaDSTxV-Sz7BFXfaGBz9Qa0zr9Os110tYFz06_yon3gK7RdYG2WGkEFdFVqioXobG4nkRiUhXulLSFrpNM7V1y2o1nIz4VH2SVqCzHg4zlqnopsDz-t-H_KABBvhg"/>
-<div class="absolute top-4 left-4 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-sm">
-<span class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-primary">RAPORLAR</span>
-</div>
-</div>
-<div class="p-6 flex flex-col flex-1">
-<div class="flex items-center gap-2 mb-3 text-on-surface-variant">
-<span class="material-symbols-outlined text-sm">calendar_today</span>
-<span class="font-label text-xs uppercase tracking-wider">01 EKİM 2023</span>
-</div>
-<h3 class="font-headline text-xl font-bold text-on-surface mb-3 group-hover:text-primary transition-colors">2023 Q3 Küresel Siber Güvenlik Mimarisi Raporu</h3>
-<p class="font-body text-sm text-on-surface-variant line-clamp-3 mb-6">Yılın üçüncü çeyreğinde tespit edilen zafiyetlerin analizi, kurumsal altyapıların maruz kaldığı riskler ve MergenScan gözlem verileri.</p>
-<div class="mt-auto pt-4 border-t border-surface-container-low flex justify-between items-center">
-<span class="font-label text-xs font-bold uppercase tracking-widest text-primary">DETAYLI İNCELE</span>
-<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
-</div>
-</div>
-</article>
-</div>
-</section>
-</main>
-<!-- Footer -->
-<footer class="bg-surface-container-low border-t border-surface-container px-8 py-12">
-<div class="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-<div class="col-span-1 md:col-span-1">
-<span class="text-xl font-black tracking-tighter uppercase text-on-surface block mb-4">MERGENSCAN</span>
-<p class="font-label text-xs text-on-surface-variant max-w-xs leading-relaxed">Mimari güvenlik yaklaşımıyla modern dijital altyapıları koruyan yeni nesil analiz ve gözlem platformu.</p>
-</div>
-<div>
-<h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">ÇÖZÜMLER</h4>
-<ul class="space-y-2 font-body text-sm text-on-surface-variant">
-<li><a class="hover:text-primary transition-colors" href="#">Zafiyet Taraması</a></li>
-<li><a class="hover:text-primary transition-colors" href="#">Altyapı Analizi</a></li>
-<li><a class="hover:text-primary transition-colors" href="#">Sürekli İzleme</a></li>
-</ul>
-</div>
-<div>
-<h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">ŞİRKET</h4>
-<ul class="space-y-2 font-body text-sm text-on-surface-variant">
-<li><a class="hover:text-primary transition-colors" href="#">Hakkımızda</a></li>
-<li><a class="hover:text-primary transition-colors" href="#">Haberler &amp; Blog</a></li>
-<li><a class="hover:text-primary transition-colors" href="#">Kariyer</a></li>
-</ul>
-</div>
-<div>
-<h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">İLETİŞİM</h4>
-<ul class="space-y-2 font-body text-sm text-on-surface-variant">
-<li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">mail</span> info@mergenscan.com</li>
-<li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">location_on</span> İstanbul, Türkiye</li>
-</ul>
-</div>
-</div>
-<div class="max-w-[1600px] mx-auto mt-12 pt-8 border-t border-surface-container flex flex-col md:flex-row justify-between items-center gap-4">
-<p class="font-label text-xs text-on-surface-variant">© 2023 MergenScan. Tüm hakları saklıdır.</p>
-<div class="flex gap-4 font-label text-xs text-on-surface-variant">
-<a class="hover:text-primary transition-colors" href="#">Gizlilik Politikası</a>
-<a class="hover:text-primary transition-colors" href="#">Kullanım Şartları</a>
-</div>
-</div>
-</footer>
-<script>
-    function startScan() {
-        console.log("Scan started for: " + document.getElementById('targetUrl').value);
-        // Implementation for scanning
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MergenScan — Güvenlik Tarayıcı</title>
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,600&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-</script>
-</body></html>
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    :root {
+      --ink: #111010;
+      --ink-2: #3a3839;
+      --ink-3: #7a7675;
+      --ink-4: #b8b4b3;
+      --ink-5: #dbd7d6;
+      --paper: #f5f3f0;
+      --paper-2: #eeebe7;
+      --paper-3: #e4e0db;
+      --white: #fefefe;
+      --green: #1a6b3a;
+      --green-bg: #eef7f2;
+      --green-border: #c0deca;
+      --amber: #8a5c00;
+      --amber-bg: #fdf6e8;
+      --amber-border: #e0c980;
+      --red: #a51c1c;
+      --red-bg: #fdf0f0;
+      --red-border: #e0b0b0;
+      --blue: #1c4fa5;
+      --blue-bg: #eff4fd;
+      --blue-border: #b0c8e8;
+      --mono: 'DM Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+      --serif: 'Fraunces', serif;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: var(--serif);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 28px 80px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 28px;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 30px;
+      height: 30px;
+      border: 1.5px solid var(--ink);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-family: var(--mono);
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .logo-text {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .nav-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+      border: 1px solid var(--paper-3);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    .nav-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.35;
+      }
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--paper-3);
+      margin: 0 28px;
+    }
+
+    .hero {
+      padding: 64px 0 48px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 5.5vw, 66px);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--ink-2);
+      max-width: 420px;
+      margin: 0 auto 40px;
+    }
+
+    .scanner-wrap {
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    .scanner-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 10px;
+      padding: 7px 7px 7px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .url-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: var(--mono);
+      font-size: 15px;
+      outline: none;
+    }
+
+    .btn-scan {
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      border-radius: 7px;
+      padding: 11px 22px;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-scan:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .scanner-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding: 0 2px;
+    }
+
+    .scanner-hint {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-4);
+    }
+
+    .btn-modules {
+      background: transparent;
+      border: 1px solid var(--paper-3);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+      cursor: pointer;
+    }
+
+    .dropdown-container {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 12px;
+      padding: 16px;
+      min-width: 440px;
+      max-width: 95vw;
+      box-shadow: var(--shadow-md);
+      z-index: 100;
+    }
+
+    @media (max-width: 480px) {
+      .dropdown-menu {
+        min-width: unset;
+        width: calc(100vw - 40px);
+        /* ekran genişliği - kenar boşlukları */
+        right: -10px;
+        /* sağa taşmasın */
+      }
+
+      .modules-grid {
+        grid-template-columns: 1fr;
+        /* tek sütun olsun */
+      }
+    }
+
+    .dropdown-menu.active {
+      display: block;
+    }
+
+    .dropdown-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .module-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--paper);
+      border: 1px solid var(--paper-3);
+      border-radius: 7px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .module-toggle.active {
+      border-color: var(--ink-4);
+      background: var(--white);
+    }
+
+    .module-toggle input {
+      display: none;
+    }
+
+    .toggle-dot {
+      width: 32px;
+      height: 18px;
+      background: var(--paper-3);
+      border-radius: 9px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .module-toggle.active .toggle-dot {
+      background: var(--ink);
+    }
+
+    .toggle-dot::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: var(--white);
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+    }
+
+    .module-toggle.active .toggle-dot::after {
+      transform: translateX(14px);
+    }
+
+    .module-info .name {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .stats-strip {
+      display: flex;
+      justify-content: center;
+      border-top: 1px solid var(--paper-3);
+      border-bottom: 1px solid var(--paper-3);
+      margin-top: 56px;
+    }
+
+    .stat-item {
+      flex: 1;
+      text-align: center;
+      padding: 20px;
+      border-right: 1px solid var(--paper-3);
+    }
+
+    .stat-item:last-child {
+      border-right: none;
+    }
+
+    .stat-num {
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 700;
+      display: block;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-4);
+    }
+
+    .progress-section {
+      display: none;
+      padding: 64px 0;
+      text-align: center;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      max-width: 460px;
+      height: 3px;
+      background: var(--paper-3);
+      margin: 0 auto 32px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--ink);
+      width: 0%;
+      transition: width 0.5s;
+    }
+
+    .spinner-text {
+      font-family: var(--serif);
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    .spinner-sub {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+    }
+
+    .results-section {
+      display: none;
+    }
+
+    .results-section.visible {
+      display: block;
+    }
+
+    .results-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .results-title {
+      font-family: var(--serif);
+      font-size: 30px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-card .stat-num {
+      font-size: 30px;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .stat-lbl {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-3);
+    }
+
+    .stat-red .stat-num {
+      color: var(--red);
+    }
+
+    .stat-orange .stat-num {
+      color: var(--amber);
+    }
+
+    .stat-blue .stat-num {
+      color: var(--blue);
+    }
+
+    .stat-green .stat-num {
+      color: var(--green);
+    }
+
+    .finding-card {
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .finding-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .severity-pip {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sev-high {
+      background: var(--red);
+    }
+
+    .sev-medium {
+      background: var(--amber);
+    }
+
+    .sev-low {
+      background: var(--blue);
+    }
+
+    .sev-pass {
+      background: var(--green);
+    }
+
+    .finding-title {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .severity-tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 3px;
+    }
+
+    .tag-high {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .tag-medium {
+      background: var(--amber-bg);
+      color: var(--amber);
+    }
+
+    .tag-low {
+      background: var(--blue-bg);
+      color: var(--blue);
+    }
+
+    .finding-body {
+      display: none;
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--paper-2);
+    }
+
+    .finding-card.open .finding-body {
+      display: block;
+    }
+
+    .finding-detail {
+      background: var(--paper);
+      padding: 12px;
+      margin-top: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      border-radius: 4px;
+    }
+
+    .remediation {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--ink-2);
+    }
+
+    .news-section {
+      border-top: 1px solid var(--paper-3);
+      padding-top: 56px;
+      margin-top: 56px;
+    }
+
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .news-card {
+      display: flex;
+      flex-direction: column;
+      background: var(--white);
+      border: 1px solid var(--paper-3);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--ink);
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+
+    .news-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .news-img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      background: var(--paper-2);
+    }
+
+    .news-body {
+      padding: 14px;
+    }
+
+    .news-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 5px;
+    }
+
+    /* ══ COVER ══ */
+    .cover {
+      position: relative;
+      min-height: 100vh;
+      background: #0c0c0c;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.065) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+    .cover-glow {
+      position: absolute;
+      top: -180px; left: 50%;
+      transform: translateX(-50%);
+      width: 900px; height: 600px;
+      background: radial-gradient(ellipse, rgba(26,107,58,0.2) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .cover-fade {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 200px;
+      background: linear-gradient(to bottom, transparent, #f5f3f0);
+      pointer-events: none;
+      z-index: 5;
+    }
+    .cover-nav {
+      position: relative; z-index: 10;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 22px 40px;
+      max-width: 1040px; margin: 0 auto; width: 100%;
+    }
+    .cover-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+    .cover-logo-mark {
+      width:30px; height:30px;
+      border:1px solid rgba(255,255,255,0.15);
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'DM Mono',monospace; font-size:13px; font-weight:600;
+      color:rgba(255,255,255,0.8);
+    }
+    .cover-logo-text {
+      font-family:'Fraunces',serif; font-size:20px; font-weight:700;
+      color:rgba(255,255,255,0.9);
+    }
+    .cover-badge {
+      display:flex; align-items:center; gap:6px;
+      font-family:'DM Mono',monospace; font-size:12px;
+      color:rgba(255,255,255,0.3);
+      border:1px solid rgba(255,255,255,0.1);
+      padding:5px 13px; border-radius:20px;
+    }
+    .cover-badge-dot {
+      width:6px; height:6px; border-radius:50%;
+      background:#1a6b3a;
+      animation:breathe 2.5s ease-in-out infinite;
+    }
+    .cover-body {
+      position:relative; z-index:10; flex:1;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:40px 28px 130px;
+    }
+    .cover-tag {
+      display:inline-flex; align-items:center; gap:7px;
+      font-family:'DM Mono',monospace; font-size:11px;
+      letter-spacing:.1em; text-transform:uppercase;
+      color:#1a6b3a;
+      border:1px solid rgba(26,107,58,0.3);
+      background:rgba(26,107,58,0.08);
+      padding:5px 14px; border-radius:20px;
+      margin-bottom:32px;
+      animation:coverRise .8s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-tag-dot {
+      width:5px; height:5px; border-radius:50%;
+      background:#1a6b3a;
+      animation:breathe 2.5s ease-in-out infinite;
+    }
+    .cover-title {
+      font-family:'Fraunces',serif;
+      font-size:clamp(44px,6.5vw,84px);
+      font-weight:600; line-height:1.05;
+      letter-spacing:-.03em; color:#fff;
+      margin-bottom:20px;
+      animation:coverRise .8s .07s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-title em { font-style:italic; color:#4ade80; }
+    .cover-desc {
+      font-family:'DM Sans',sans-serif;
+      font-size:16px; color:rgba(255,255,255,0.45);
+      line-height:1.7; max-width:440px;
+      margin-bottom:46px;
+      animation:coverRise .8s .14s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-pills {
+      display:flex; flex-wrap:wrap; justify-content:center;
+      gap:7px; margin-bottom:50px;
+      animation:coverRise .8s .2s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-pill {
+      font-family:'DM Mono',monospace; font-size:11px;
+      padding:4px 12px; border-radius:20px;
+      color:rgba(255,255,255,0.3);
+      border:1px solid rgba(255,255,255,0.07);
+    }
+    .cover-pill.high   { color:#f87171; border-color:rgba(248,113,113,.2); }
+    .cover-pill.medium { color:#fbbf24; border-color:rgba(251,191,36,.2); }
+    .cover-pill.low    { color:#60a5fa; border-color:rgba(96,165,250,.2); }
+    .cover-pill.safe   { color:#4ade80; border-color:rgba(74,222,128,.2); }
+    .cover-cta {
+      display:inline-flex; align-items:center; gap:10px;
+      background:#fff; color:#0c0c0c;
+      border:none; border-radius:8px;
+      padding:13px 26px;
+      font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600;
+      cursor:pointer;
+      transition:background .15s, transform .15s;
+      animation:coverRise .8s .26s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-cta:hover { background:#ece9e5; transform:translateY(-1px); }
+    .cover-arrow {
+      position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+      z-index:10;
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      cursor:pointer;
+      animation:coverRise .8s .38s cubic-bezier(.16,1,.3,1) both;
+    }
+    .cover-arrow span {
+      font-family:'DM Mono',monospace; font-size:10px;
+      letter-spacing:.1em; text-transform:uppercase;
+      color:rgba(255,255,255,0.18);
+    }
+    .cover-arrow-icon { animation:arrowBounce 2s ease-in-out infinite; }
+    @keyframes arrowBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+    @keyframes coverRise {
+      from{opacity:0;transform:translateY(22px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    .cover-stats {
+      position:relative; z-index:10;
+      display:flex;
+      border-top:1px solid rgba(255,255,255,0.06);
+    }
+    .cover-stat {
+      flex:1; text-align:center; padding:18px;
+      border-right:1px solid rgba(255,255,255,0.06);
+    }
+    .cover-stat:last-child { border-right:none; }
+    .cover-stat-n {
+      display:block;
+      font-family:'DM Mono',monospace; font-size:18px; font-weight:500;
+      color:rgba(255,255,255,0.65); margin-bottom:2px;
+    }
+    .cover-stat-l {
+      font-family:'DM Mono',monospace; font-size:11px;
+      color:rgba(255,255,255,0.22);
+    }
+    @media(max-width:600px){
+      .cover-pills,.cover-stats{display:none;}
+      .cover-nav{padding:16px 20px;}
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ══ COVER ══ -->
+  <div class="cover">
+    <div class="cover-glow"></div>
+    <div class="cover-fade"></div>
+    <nav class="cover-nav">
+      <a href="#" class="cover-logo">
+        <div class="cover-logo-mark">MS</div>
+        <span class="cover-logo-text">MergenScan</span>
+      </a>
+      <div class="cover-badge">
+        <div class="cover-badge-dot"></div>Canlı Tarayıcı
+      </div>
+    </nav>
+    <div class="cover-body">
+      <div class="cover-tag">
+        <span class="cover-tag-dot"></span>Web Güvenlik Tarayıcısı
+      </div>
+      <h1 class="cover-title">
+        Açıklarınızı biz bulmadan<br><em>siz bulun.</em>
+      </h1>
+      <p class="cover-desc">
+        SQL Injection, XSS, CSRF dahil 12 farklı güvenlik testiyle<br>
+        web uygulamanızı saniyeler içinde tarar ve raporlar.
+      </p>
+      <div class="cover-pills">
+        <span class="cover-pill high">SQL Injection</span>
+        <span class="cover-pill high">Cmd Injection</span>
+        <span class="cover-pill high">Path Traversal</span>
+        <span class="cover-pill medium">XSS</span>
+        <span class="cover-pill medium">CSRF</span>
+        <span class="cover-pill medium">Open Redirect</span>
+        <span class="cover-pill low">HTTP Headers</span>
+        <span class="cover-pill low">CORS / SSL</span>
+        <span class="cover-pill safe">WAF Tespiti</span>
+        <span class="cover-pill safe">Hassas Dosyalar</span>
+      </div>
+      <button class="cover-cta" onclick="document.getElementById('appStart').scrollIntoView({behavior:'smooth'})">
+        Taramayı Başlat
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M7.5 2v11M2 8l5.5 5.5L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="cover-arrow" onclick="document.getElementById('appStart').scrollIntoView({behavior:'smooth'})">
+      <span>aşağı kaydır</span>
+      <div class="cover-arrow-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v12M3 9l5 5 5-5" stroke="rgba(255,255,255,0.22)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="cover-stats">
+      <div class="cover-stat"><span class="cover-stat-n">12</span><span class="cover-stat-l">Test Modülü</span></div>
+      <div class="cover-stat"><span class="cover-stat-n">~30s</span><span class="cover-stat-l">Ortalama Süre</span></div>
+      <div class="cover-stat"><span class="cover-stat-n">OWASP</span><span class="cover-stat-l">Top 10 Kapsam</span></div>
+      <div class="cover-stat"><span class="cover-stat-n">0</span><span class="cover-stat-l">Veri Kaydedilmez</span></div>
+    </div>
+  </div>
+
+  <nav id="appStart">
+
+    <a href="#" class="logo">
+      <div class="logo-mark">MS</div>
+      <span class="logo-text">MergenScan</span>
+    </a>
+    <div class="nav-badge">
+      <div class="nav-badge-dot"></div>Canlı Tarayıcı
+    </div>
+  </nav>
+  <div class="divider"></div>
+
+  <div class="container">
+    <div id="mainContent">
+      <section class="hero">
+        <div class="hero-eyebrow">Güvenlik Taraması</div>
+        <h1>Web uygulamanızdaki açıkları <em>tespit edin.</em></h1>
+        <p class="hero-sub">SQL Injection, XSS, CSRF dahil 12 farklı testle güvenlik açıklarını otomatik olarak tarar ve
+          raporlar.</p>
+        <div class="scanner-wrap">
+          <div class="scanner-box">
+            <input type="text" class="url-input" id="targetUrl" placeholder="https://site-adresi.com"
+              onkeydown="if(event.key==='Enter') startScan()">
+            <button class="btn-scan" id="btnScan" onclick="startScan()">Tara</button>
+          </div>
+          <div class="scanner-actions">
+            <span class="scanner-hint">Enter ile taramayı başlat</span>
+            <div class="dropdown-container">
+              <button class="btn-modules"
+                onclick="document.getElementById('moduleDropdown').classList.toggle('active')">Modüller</button>
+              <div class="dropdown-menu" id="moduleDropdown">
+                <div class="dropdown-header">
+                  <h3>Test Modülleri</h3>
+                  <button onclick="document.getElementById('moduleDropdown').classList.remove('active')"
+                    style="background:none;border:none;cursor:pointer;font-size:16px">✕</button>
+                </div>
+                <div class="modules-grid" id="modulesGrid"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="progress-section" id="progressSection">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <div class="spinner-text" id="spinnerText">Taranıyor…</div>
+      <div class="spinner-sub" id="spinnerSub">// başlatılıyor</div>
+    </div>
+
+    <div class="results-section" id="resultsSection">
+      <div class="results-top">
+        <h2 class="results-title">Tarama Sonuçları</h2>
+      </div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div id="findingsList"></div>
+      <button class="btn-scan" style="margin:20px auto; display:block" onclick="location.reload()">↺ Yeni
+        Tarama</button>
+    </div>
+
+    <section class="news-section">
+      <h2>Güvenlik Haberleri</h2><br>
+      <div class="news-grid" id="newsGrid">
+        <p>Haberler yükleniyor...</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /* ── Yardımcı: XSS koruması ── */
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    /* ── Modül listesi ── */
+    const modules = [
+      { id: 'sqli', name: 'SQL Injection', desc: 'Veritabanı açıkları' },
+      { id: 'xss', name: 'XSS', desc: 'Script enjeksiyonu' },
+      { id: 'csrf', name: 'CSRF', desc: 'Token kontrolü' },
+      { id: 'headers', name: 'HTTP Headers', desc: 'Güvenlik başlıkları' },
+      { id: 'traversal', name: 'Path Traversal', desc: 'Dizin geçişi' },
+      { id: 'files', name: 'Hassas Dosyalar', desc: '.env, .git vb.' },
+      { id: 'redirect', name: 'Open Redirect', desc: 'Yönlendirme açığı' },
+      { id: 'cmdi', name: 'Cmd Injection', desc: 'Komut enjeksiyonu' },
+      { id: 'cors', name: 'CORS', desc: 'Origin politikası' },
+      { id: 'ssl', name: 'SSL/TLS', desc: 'Sertifika kontrolü' },
+      { id: 'waf', name: 'WAF Tespiti', desc: 'Güvenlik duvarı' },
+      { id: 'robots', name: 'Robots/Sitemap', desc: 'Gizli yollar' },
+    ];
+
+    /* ── Sayfa yüklenince modülleri oluştur ── */
+    document.addEventListener('DOMContentLoaded', () => {
+      const grid = document.getElementById('modulesGrid');
+      grid.innerHTML = modules.map(mod =>
+        `<label class="module-toggle active" data-module="${mod.id}">
+          <input type="checkbox" checked>
+          <div class="toggle-dot"></div>
+          <div class="module-info"><div class="name">${mod.name}</div></div>
+        </label>`
+      ).join('');
+
+      /* Toggle tıklaması */
+      grid.addEventListener('click', e => {
+        const toggle = e.target.closest('.module-toggle');
+        if (!toggle) return;
+        toggle.classList.toggle('active');
+        const cb = toggle.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = toggle.classList.contains('active');
+      });
+
+      loadNews();
+    });
+
+    /* ── Seçili modülleri al ── */
+    function getSelectedModules() {
+      return [...document.querySelectorAll('.module-toggle.active')]
+        .map(el => el.dataset.module)
+        .filter(Boolean);
+    }
+
+    /* ── Haberleri yükle ── */
+    async function loadNews() {
+      try {
+        const res = await fetch('/api/news');
+        if (!res.ok) throw new Error('Hata');
+        const data = await res.json();
+        const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23eeebe7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23b8b4b3'%3EGörsel Yok%3C/text%3E%3C/svg%3E";
+        document.getElementById('newsGrid').innerHTML = data.articles.map(a =>
+          `<a class="news-card" href="${escapeHTML(a.link)}" target="_blank" rel="noopener noreferrer">
+            <img src="${escapeHTML(a.image) || fallbackImg}" class="news-img" loading="lazy"
+              onerror="this.src='${fallbackImg}'">
+            <div class="news-body"><div class="news-title">${escapeHTML(a.title)}</div></div>
+          </a>`
+        ).join('');
+      } catch (e) {
+        document.getElementById('newsGrid').innerHTML = '<p style="color:var(--ink-3);font-family:var(--mono);font-size:13px">Haberler yüklenemedi.</p>';
+      }
+    }
+
+    /* ── Taramayı başlat ── */
+    async function startScan() {
+      const url = document.getElementById('targetUrl').value.trim();
+      if (!url) return alert('Lütfen URL girin.');
+
+      const selectedModules = getSelectedModules();
+      if (selectedModules.length === 0) return alert('Lütfen en az bir modül seçin.');
+
+      /* UI: tarama moduna geç */
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('btnScan').disabled = true;
+
+      try {
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url, modules: selectedModules })
+        });
+
+        if (!res.ok) {
+          let errMsg = `Sunucu Hatası (${res.status}).`;
+          try { const errData = await res.json(); errMsg = errData.error || errMsg; } catch (e) { }
+          throw new Error(errMsg);
+        }
+
+        const data = await res.json();
+        const scanId = data.scan_id;
+
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusRes = await fetch('/api/status/' + scanId);
+            if (!statusRes.ok) return;
+            const statusData = await statusRes.json();
+
+            // FİX: "error" durumu yalnızca gerçek hatalarda tetiklenir.
+            // Kuyruk silinmiş ama sonuç hazırsa sunucu artık __DONE__ döndürür (hata değil).
+            if (statusData.status === 'error') {
+              clearInterval(pollInterval);
+              document.getElementById('spinnerSub').textContent = '// Hata: ' + statusData.msg;
+              return;
+            }
+
+            for (const msg of (statusData.messages || [])) {
+              if (msg === '__DONE__') {
+                clearInterval(pollInterval);
+                // FİX: race condition — scan_results'ın yazılması için kısa bekleme
+                await new Promise(resolve => setTimeout(resolve, 300));
+                const resultRes = await fetch('/api/results/' + scanId);
+                // FİX: 202 = sonuç henüz hazır değil, kısa gecikme sonrası bir kez daha dene
+                if (resultRes.status === 202) {
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  const retryRes = await fetch('/api/results/' + scanId);
+                  if (!retryRes.ok) throw new Error('Sonuç alınamadı.');
+                  showResults(await retryRes.json());
+                } else if (!resultRes.ok) {
+                  throw new Error('Sonuç alınamadı.');
+                } else {
+                  showResults(await resultRes.json());
+                }
+              } else if (msg.startsWith('__PROGRESS__:')) {
+                const pct = msg.split(':')[1];
+                document.getElementById('progressFill').style.width = pct + '%';
+              } else {
+                document.getElementById('spinnerSub').textContent = '// ' + msg;
+              }
+            }
+          } catch (e) {
+            console.error('Polling hatası:', e);
+            clearInterval(pollInterval);
+            document.getElementById('spinnerText').textContent = 'Tarama Başarısız';
+            document.getElementById('spinnerSub').textContent = '// ' + e.message;
+            document.getElementById('progressFill').style.background = 'var(--red)';
+          }
+        }, 500);
+
+      } catch (err) {
+        alert('Hata: ' + err.message);
+        document.getElementById('btnScan').disabled = false;
+        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('progressSection').style.display = 'none';
+      }
+    }
+
+    /* ── Sonuçları göster ── */
+    function showResults(result) {
+      document.getElementById('progressSection').style.display = 'none';
+      document.getElementById('resultsSection').classList.add('visible');
+
+      const { findings = [], counts = {}, score = 0 } = result;
+
+      document.getElementById('summaryGrid').innerHTML = `
+        <div class="stat-card stat-red"><span class="stat-num">${counts.HIGH || 0}</span><span class="stat-lbl">Yüksek</span></div>
+        <div class="stat-card stat-orange"><span class="stat-num">${counts.MEDIUM || 0}</span><span class="stat-lbl">Orta</span></div>
+        <div class="stat-card stat-blue"><span class="stat-num">${counts.LOW || 0}</span><span class="stat-lbl">Düşük</span></div>
+        <div class="stat-card stat-green"><span class="stat-num">${score}</span><span class="stat-lbl">Skor</span></div>`;
+
+      const list = document.getElementById('findingsList');
+      if (findings.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:var(--green);padding:24px;font-family:var(--mono)">✓ Açık bulunamadı.</p>';
+        return;
+      }
+
+      list.innerHTML = findings.map(f => `
+        <div class="finding-card">
+          <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
+            <div class="severity-pip sev-${(f.severity || 'low').toLowerCase()}"></div>
+            <div class="finding-title">${escapeHTML(f.title)}</div>
+            <span class="severity-tag tag-${(f.severity || 'low').toLowerCase()}">${escapeHTML(f.severity)}</span>
+          </div>
+          <div class="finding-body">
+            <div class="finding-detail">${escapeHTML(f.detail)}</div>
+            <div class="remediation"><p>${escapeHTML(f.fix)}</p></div>
+          </div>
+        </div>`).join('');
+    }
+  </script>
+  <footer
+    style="border-top:1px solid var(--paper-3);margin-top:60px;padding:24px 28px;max-width:1040px;margin-left:auto;margin-right:auto;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12px;color:var(--ink-4)">
+    <span>© 2025 MergenScan — Tüm hakları saklıdır.</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="color:var(--green);font-size:8px">●</span>
+      Aktif</span>
+  </footer>
+</body>
+
+</html>
