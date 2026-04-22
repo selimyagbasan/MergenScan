@@ -6,9 +6,6 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>MergenScan — Yeni Nesil Siber Güvenlik Tarayıcı</title>
   <meta name="description" content="SQL Injection, XSS, CSRF dahil 12 farklı güvenlik testiyle web uygulamanızı saniyeler içinde tarar ve raporlar." />
-  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
-  
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -352,10 +349,6 @@
                 <p class="font-body text-on-surface-variant mt-1" id="resultUrlLabel"></p>
               </div>
               <div class="flex gap-2">
-                <button onclick="exportPDF()" class="bg-transparent border border-outline/20 text-on-surface px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
-                  <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
-                  PDF
-                </button>
                 <button onclick="location.reload()" class="bg-primary text-on-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:opacity-90 transition-opacity flex items-center gap-2">
                   <span class="material-symbols-outlined text-sm">refresh</span>
                   YENİ TARAMA
@@ -779,41 +772,6 @@
             </div>
           </div>`;
       }).join('');
-    }
-
-    /* ── PDF Export ── */
-    function exportPDF() {
-      if (!lastScanResult) return;
-      try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const { findings = [], counts = {}, score = 0 } = lastScanResult;
-
-        doc.setFontSize(20);
-        doc.text('MergenScan — Tarama Raporu', 14, 22);
-        doc.setFontSize(11);
-        doc.text('URL: ' + scannedUrl, 14, 32);
-        doc.text('Tarih: ' + new Date().toLocaleString('tr-TR'), 14, 38);
-        doc.text(`Skor: ${score} | Yüksek: ${counts.HIGH || 0} | Orta: ${counts.MEDIUM || 0} | Düşük: ${counts.LOW || 0}`, 14, 46);
-
-        if (findings.length > 0) {
-          doc.autoTable({
-            startY: 54,
-            head: [['Seviye', 'Başlık', 'Detay', 'Çözüm']],
-            body: findings.map(f => [f.severity, f.title, f.detail, f.fix]),
-            styles: { fontSize: 8, cellPadding: 3 },
-            headStyles: { fillColor: [0, 0, 0] },
-            columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 35 } }
-          });
-        } else {
-          doc.text('Açık bulunamadı. Tüm testler başarıyla geçildi.', 14, 54);
-        }
-
-        doc.save('MergenScan_Rapor_' + Date.now() + '.pdf');
-      } catch (e) {
-        console.error('PDF oluşturulamadı:', e);
-        alert('PDF oluşturulurken bir hata oluştu.');
-      }
     }
 
     /* ───
