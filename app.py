@@ -101,11 +101,12 @@ def add_security_headers(response):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
-        "connect-src 'self' https://unpkg.com;"
+        "connect-src 'self' https://unpkg.com; "
+        "frame-src 'self' https://cybermap.kaspersky.com;"
     )
     return response
 

@@ -28,7 +28,10 @@ class WebShieldScanner:
         self.session.headers.update({"User-Agent": "WebShield-Scanner/2.0"})
 
     def _log(self, msg):
-        print(msg)
+        try:
+            print(msg)
+        except UnicodeEncodeError:
+            print(msg.encode('ascii', 'replace').decode('ascii'))
         if self.log_callback:
             self.log_callback(msg)
 

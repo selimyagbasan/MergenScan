@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>MergenScan - Yeni Nesil Siber Güvenlik</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#410002",
+                        "surface-container-low": "#f3f3f4",
+                        "outline-variant": "#c6c6c6",
+                        "surface-bright": "#f9f9f9",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-secondary-fixed-variant": "#3c3b3b",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "inverse-on-surface": "#f0f1f1",
+                        "background": "#f9f9f9",
+                        "secondary": "#5f5e5e",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#1c1b1b",
+                        "outline": "#777777",
+                        "on-tertiary-fixed-variant": "#85f8c4",
+                        "surface-dim": "#dadada",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#ffffff",
+                        "on-primary": "#e2e2e2",
+                        "tertiary-fixed": "#006c4a",
+                        "primary-fixed-dim": "#474747",
+                        "on-surface": "#1a1c1c",
+                        "secondary-fixed-dim": "#adabaa",
+                        "surface-tint": "#5e5e5e",
+                        "primary-container": "#3b3b3b",
+                        "surface-container": "#eeeeee",
+                        "inverse-surface": "#2f3131",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-tertiary-fixed": "#ffffff",
+                        "on-tertiary-container": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface": "#f9f9f9",
+                        "primary": "#000000",
+                        "tertiary-fixed-dim": "#005137",
+                        "tertiary-container": "#00855d",
+                        "on-tertiary": "#85f8c4",
+                        "surface-container-high": "#e8e8e8",
+                        "on-background": "#1a1c1c",
+                        "surface-variant": "#e2e2e2",
+                        "on-primary-container": "#ffffff",
+                        "secondary-container": "#d6d4d3",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#00452e",
+                        "primary-fixed": "#5e5e5e",
+                        "secondary-fixed": "#c8c6c5",
+                        "on-surface-variant": "#474747",
+                        "inverse-primary": "#c6c6c6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"],
+                        "mono": ["Inter", "sans-serif"],
+                        "sans": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-panel {
+            background-color: rgba(249, 249, 249, 0.8);
+            backdrop-filter: blur(20px);
+        }
+
+        .ambient-shadow {
+            box-shadow: 0 24px 40px -12px rgba(26, 28, 28, 0.06);
+        }
+
+        .status-pulse {
+            position: relative;
+            width: 8px;
+            height: 8px;
+            background-color: #00452e;
+            border-radius: 50%;
+        }
+
+        .status-pulse::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            background-color: rgba(0, 133, 93, 0.5);
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            80%,
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-on-surface antialiased selection:bg-primary selection:text-on-primary">
+    <!-- Top Navigation (Generated from JSON guidance) -->
+    <nav
+        class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#f9f9f9] dark:bg-slate-950 font-sans tracking-tight text-sm uppercase font-semibold text-black dark:text-white glass-panel border-b border-surface-container-low md:border-none">
+        <div class="flex items-center gap-4">
+            <img alt="MergenScan Logo" class="h-8 w-auto"
+                src="https://lh3.googleusercontent.com/aida/ADBb0uikeqblBzmA5cfdUSR8usDzOQTNv63t31GI-0JcL9WcRU06_kBxX3bO8kRa9_EsUNoqCeEN1naF5M2m0JfVgFvqG9Nn7L9t5krfQLdSPo85rtctfNPjItGDO_H3-oAcs9KyJ5aBPM8WAZWU2D8vX2dePKJgTIbTSDIy-Vysnnjcby7v0vfxtNtUk7UQ4IxAlfV47A2r77Y4ncUTrTvUq9sdWfXi7SUlXtTdPDvQu5rEQOGPsG3DmYAmBDI" />
+            <span class="text-xl font-black tracking-tighter uppercase hidden md:block">MergenScan</span>
+        </div>
+        <div class="flex items-center gap-8">
+            <button
+                class="bg-primary text-on-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:opacity-90 transition-opacity active:scale-[0.99]"
+                onclick="document.getElementById('targetUrl').focus()">
+                TARAMAYI BAŞLAT
+            </button>
+        </div>
+    </nav>
+    <main class="w-full">
+        <!-- Hero Section -->
+        <section
+            class="relative pt-24 pb-32 px-8 md:px-16 max-w-[1600px] mx-auto min-h-[870px] flex flex-col justify-center">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+                <!-- Hero Content -->
+                <div class="lg:col-span-7 flex flex-col gap-8 z-10">
+                    <div
+                        class="inline-flex items-center gap-3 bg-surface-container-lowest py-2 px-4 rounded-full self-start ambient-shadow">
+                        <div class="status-pulse"></div>
+                        <span
+                            class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-tertiary">SİSTEM
+                            AKTİF &amp; İZLEMEDE</span>
+                    </div>
+                    <h1
+                        class="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface leading-[1.05]">
+                        Yeni Nesil Siber Güvenlik: <br /><span class="text-primary">MergenScan</span>
+                    </h1>
+                    <p class="font-body text-lg md:text-xl text-on-surface-variant max-w-2xl leading-relaxed">
+                        Modern altyapılar için mimari savunma. Tehditleri yapısal sükunetle analiz edin, tanımlayın ve
+                        etkisiz hale getirin.
+                    </p>
+                    <!-- Primary Scanner Input -->
+                    <div
+                        class="mt-4 max-w-2xl bg-surface-container-lowest p-2 rounded-sm flex flex-col sm:flex-row gap-2 ambient-shadow">
+                        <div class="flex-1 relative">
+                            <span
+                                class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">language</span>
+                            <input
+                                class="w-full bg-surface border-none h-14 pl-12 pr-4 text-base focus:ring-0 focus:border-b focus:border-primary transition-all rounded-sm placeholder:text-on-surface-variant/60 font-body"
+                                id="targetUrl" placeholder="Taramak istediğiniz alan adını veya IP adresini girin..."
+                                type="text" />
+                        </div>
+                        <button
+                            class="bg-primary text-on-primary h-14 px-8 font-bold uppercase tracking-wider text-sm hover:opacity-90 transition-opacity whitespace-nowrap flex items-center justify-center gap-2 rounded-l-sm"
+                            id="btnScan" onclick="startScan()">
+                            <span class="material-symbols-outlined text-lg"
+                                style="font-variation-settings: 'FILL' 1;">radar</span>
+                            ANALİZ ET
+                        </button><button
+                            class="bg-primary text-on-primary h-14 w-12 flex items-center justify-center border-l border-white/20 hover:opacity-90 transition-opacity rounded-r-sm">
+                            <span class="material-symbols-outlined text-xl">keyboard_arrow_down</span>
+                        </button>
+                    </div>
+                    <!-- Progress Section Placeholder -->
+                    <div id="progressSection" style="display: none;"></div>
+                    <!-- Results Section Placeholder -->
+                    <div id="resultsSection" style="display: none;"></div>
+                    <!-- Trust Metrics -->
+                    <div class="grid grid-cols-3 gap-8 mt-12 border-t border-surface-container-low pt-8">
+                        <div>
+                            <p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">12ms</p>
+                            <p
+                                class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">
+                                ORT. ÇÖZÜM SÜRESİ</p>
+                        </div>
+                        <div>
+                            <p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">4M+</p>
+                            <p
+                                class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">
+                                KÜRESEL TESTLER</p>
+                        </div>
+                        <div>
+                            <p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">1.2K</p>
+                            <p
+                                class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">
+                                AKTİF GÖZLEMCİLER</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Hero Visual / Bento Grid -->
+                <div class="lg:col-span-5 hidden lg:grid grid-cols-2 gap-4 h-[600px] relative">
+                    <!-- Decorative Background element -->
+                    <div class="absolute inset-0 bg-surface-container-low rounded-xl -z-10 translate-x-4 translate-y-4">
+                    </div>
+                    <div
+                        class="col-span-2 bg-surface-container-lowest rounded-lg p-6 ambient-shadow flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-headline text-sm font-bold text-on-surface uppercase tracking-wide">
+                                    GERÇEK ZAMANLI TEHDİT HARİTASI</h3>
+                                <p class="font-label text-xs text-on-surface-variant mt-1">Son 24 Saat İçinde
+                                    Engellenenler</p>
+                            </div>
+                            <span class="material-symbols-outlined text-outline">public</span>
+                        </div>
+                        <!-- Abstract Map Visualization Placeholder -->
+                        <div class="h-48 w-full bg-surface mt-4 rounded-sm relative overflow-hidden"
+                            data-alt="Abstract geometric world map representation in light gray tones with subtle glowing green nodes indicating network activity, sleek corporate aesthetic">
+                            <img alt="Global Network" class="object-cover w-full h-full opacity-60 mix-blend-luminosity"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtYC0U-CiCr1kwe0lMCvBGb_7n6hZW0wnNvFoHmrErh1b1f36RNL5eu3AnNmqBaIj3o3QeXrrWc0qr3_StSJnWiu4o9ootbmFp3RgFmJ3g6CST09PJ7Kka_-czNeGAtECmh-WggQKvef80hEdyWHa9suL477uEZ8fQ5TWIewPpXEkg4lEEPhoWOM588FZX5UT7iA2iEkxTCqk6MrE3MDwowpAFhdYUuUdQFq5WZ_9r7bXSSXquVkXdHO7n41r4YjniVjsFGr4aoEM" />
+                            <!-- Overlay gradients to make it match the design system -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent"></div>
+                        </div>
+                    </div>
+                    <div
+                        class="col-span-1 bg-surface-container-lowest rounded-lg p-6 ambient-shadow flex flex-col gap-4">
+                        <span class="material-symbols-outlined text-3xl text-primary mb-auto"
+                            style="font-variation-settings: 'FILL' 1;">shield_lock</span>
+                        <div>
+                            <p class="font-headline text-2xl font-bold tracking-tighter">Sıfır Gün</p>
+                            <p
+                                class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">
+                                KORUMA MİMARİSİ</p>
+                        </div>
+                    </div>
+                    <div class="col-span-1 bg-primary rounded-lg p-6 flex flex-col gap-4 shadow-lg">
+                        <span class="material-symbols-outlined text-3xl text-on-primary mb-auto">data_exploration</span>
+                        <div>
+                            <p class="font-headline text-2xl font-bold tracking-tighter text-on-primary">99.9%</p>
+                            <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-primary/70 mt-1">
+                                SİSTEM DOĞRULUĞU</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- News / Blog Section -->
+        <section class="py-24 px-8 md:px-16 max-w-[1600px] mx-auto bg-surface">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+                <div class="max-w-xl">
+                    <h2 class="font-headline text-3xl md:text-4xl font-bold tracking-tighter text-on-surface mb-4">
+                        Güvenlik Dünyasından Güncel Haberler</h2>
+                    <p class="font-body text-on-surface-variant">Siber güvenlik trendleri, yapısal analizler ve
+                        sektördeki en son gelişmeleri mimari bir perspektifle inceleyin.</p>
+                </div>
+                <button
+                    class="bg-transparent border border-outline/20 text-on-surface px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
+                    TÜMÜNÜ GÖR
+                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- News Card 1 -->
+                <article
+                    class="group bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow flex flex-col cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+                    <div class="h-56 overflow-hidden relative">
+                        <img alt="Server Room"
+                            class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700"
+                            data-alt="Pristine, brightly lit server room corridor with white cabinets, high-tech architectural feel, clean lines, subtle green LED indicators"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-m-lUFEG7moZGQIZPb5bhizPl8uAsMo_sVhSLTRabSrXoCSOs3Fv0DSLTbDUGfLjugE019I63Wz8F682-pPZA7WRldeV45IREn4ES6-QuUns8GoKKauAvhSnCDELHCDoGpOhPe_AAqUFwjh3FQFBXzqvFpV515oxi4oTsHQEu-48bTXDWEr_4R19kssLMRgmwTQ4LhkfT49UAbnPS6GoZ6m-e3OqR4WEbC-bwer-hvwEHHaUSCTrrh-94_Wo-1T9FZWwEjggq3lU" />
+                        <div class="absolute top-4 left-4 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-sm">
+                            <span
+                                class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-primary">ALTYAPI</span>
+                        </div>
+                    </div>
+                    <div class="p-6 flex flex-col flex-1">
+                        <div class="flex items-center gap-2 mb-3 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-sm">calendar_today</span>
+                            <span class="font-label text-xs uppercase tracking-wider">12 EKİM 2023</span>
+                        </div>
+                        <h3
+                            class="font-headline text-xl font-bold text-on-surface mb-3 group-hover:text-primary transition-colors">
+                            Modern Bulut Mimarilerinde Zero-Trust Yaklaşımı</h3>
+                        <p class="font-body text-sm text-on-surface-variant line-clamp-3 mb-6">Dağıtık ağ yapılarında
+                            güvenliğin temeli olarak kabul edilen zero-trust modellerinin kurumsal altyapılara
+                            entegrasyon süreçleri ve mimari zorlukları.</p>
+                        <div
+                            class="mt-auto pt-4 border-t border-surface-container-low flex justify-between items-center">
+                            <span class="font-label text-xs font-bold uppercase tracking-widest text-primary">DETAYLI
+                                İNCELE</span>
+                            <span
+                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+                        </div>
+                    </div>
+                </article>
+                <!-- News Card 2 -->
+                <article
+                    class="group bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow flex flex-col cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+                    <div class="h-56 overflow-hidden relative">
+                        <img alt="Code Analysis"
+                            class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700"
+                            data-alt="Abstract macro shot of architectural blueprints overlapping with binary code projections, minimalist, high contrast black and white with soft light"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCs1jA8OldgA0hg1q_Zbau9K69ob4z4L5Isp9iiFASVPScqYT9E_eIVziEmmqRzEZkXzmGFpmrTb5UIwv84RNRrCsfWqbaT4ciht6RreYeH3ExsNCW6Ua5c-OcqUt_5Ce2eXr_JpbdaP-nDXkepgZ26o2l7FgfQvQZlmZQJGYNDG_llgZS4KdRR62cc5BLugf7ipEgLRi57BtZfdwc3lrGOfb9g3i-diBj2JsuLsEiVw1LJkNq0a-FSdm1f3NN-yETFC1_n-t0hD4Q" />
+                        <div class="absolute top-4 left-4 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-sm">
+                            <span
+                                class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-primary">TEHDİT
+                                ANALİZİ</span>
+                        </div>
+                    </div>
+                    <div class="p-6 flex flex-col flex-1">
+                        <div class="flex items-center gap-2 mb-3 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-sm">calendar_today</span>
+                            <span class="font-label text-xs uppercase tracking-wider">08 EKİM 2023</span>
+                        </div>
+                        <h3
+                            class="font-headline text-xl font-bold text-on-surface mb-3 group-hover:text-primary transition-colors">
+                            Gelişmiş Sürekli Tehditler (APT) Karşısında Yapısal Savunma</h3>
+                        <p class="font-body text-sm text-on-surface-variant line-clamp-3 mb-6">Geleneksel savunma
+                            hatlarını aşan APT gruplarının kullandığı yeni nesil vektörler ve bu vektörlere karşı
+                            alınması gereken mimari önlemler.</p>
+                        <div
+                            class="mt-auto pt-4 border-t border-surface-container-low flex justify-between items-center">
+                            <span class="font-label text-xs font-bold uppercase tracking-widest text-primary">DETAYLI
+                                İNCELE</span>
+                            <span
+                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+                        </div>
+                    </div>
+                </article>
+                <!-- News Card 3 -->
+                <article
+                    class="group bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow flex flex-col cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+                    <div class="h-56 overflow-hidden relative">
+                        <img alt="Data Center Architecture"
+                            class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700"
+                            data-alt="Symmetrical interior of a modern stark white corporate building atrium looking up at a glass ceiling, clean lines, minimalist, bright"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAf0CnQvtaErboyAC1CE6wIIvBF6mZdv3eIGXXFjX2xnpIHlDfytTlEU0mwluQvI9j3Icr8vM5KgCbH5zFGD-kSHyvgq34qF4YRQCOWdIfE-1P9Ss37x7pcDhaa-qOgzMvsLCy2bRnLHD4dt-YaDSTxV-Sz7BFXfaGBz9Qa0zr9Os110tYFz06_yon3gK7RdYG2WGkEFdFVqioXobG4nkRiUhXulLSFrpNM7V1y2o1nIz4VH2SVqCzHg4zlqnopsDz-t-H_KABBvhg" />
+                        <div class="absolute top-4 left-4 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-sm">
+                            <span
+                                class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-primary">RAPORLAR</span>
+                        </div>
+                    </div>
+                    <div class="p-6 flex flex-col flex-1">
+                        <div class="flex items-center gap-2 mb-3 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-sm">calendar_today</span>
+                            <span class="font-label text-xs uppercase tracking-wider">01 EKİM 2023</span>
+                        </div>
+                        <h3
+                            class="font-headline text-xl font-bold text-on-surface mb-3 group-hover:text-primary transition-colors">
+                            2023 Q3 Küresel Siber Güvenlik Mimarisi Raporu</h3>
+                        <p class="font-body text-sm text-on-surface-variant line-clamp-3 mb-6">Yılın üçüncü çeyreğinde
+                            tespit edilen zafiyetlerin analizi, kurumsal altyapıların maruz kaldığı riskler ve
+                            MergenScan gözlem verileri.</p>
+                        <div
+                            class="mt-auto pt-4 border-t border-surface-container-low flex justify-between items-center">
+                            <span class="font-label text-xs font-bold uppercase tracking-widest text-primary">DETAYLI
+                                İNCELE</span>
+                            <span
+                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </main>
+    <!-- Footer -->
+    <footer class="bg-surface-container-low border-t border-surface-container px-8 py-12">
+        <div class="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="col-span-1 md:col-span-1">
+                <span class="text-xl font-black tracking-tighter uppercase text-on-surface block mb-4">MERGENSCAN</span>
+                <p class="font-label text-xs text-on-surface-variant max-w-xs leading-relaxed">Mimari güvenlik
+                    yaklaşımıyla modern dijital altyapıları koruyan yeni nesil analiz ve gözlem platformu.</p>
+            </div>
+            <div>
+                <h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">ÇÖZÜMLER</h4>
+                <ul class="space-y-2 font-body text-sm text-on-surface-variant">
+                    <li><a class="hover:text-primary transition-colors" href="#">Zafiyet Taraması</a></li>
+                    <li><a class="hover:text-primary transition-colors" href="#">Altyapı Analizi</a></li>
+                    <li><a class="hover:text-primary transition-colors" href="#">Sürekli İzleme</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">ŞİRKET</h4>
+                <ul class="space-y-2 font-body text-sm text-on-surface-variant">
+                    <li><a class="hover:text-primary transition-colors" href="#">Hakkımızda</a></li>
+                    <li><a class="hover:text-primary transition-colors" href="#">Haberler &amp; Blog</a></li>
+                    <li><a class="hover:text-primary transition-colors" href="#">Kariyer</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">İLETİŞİM</h4>
+                <ul class="space-y-2 font-body text-sm text-on-surface-variant">
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">mail</span>
+                        info@mergenscan.com</li>
+                    <li class="flex items-center gap-2"><span
+                            class="material-symbols-outlined text-sm">location_on</span> İstanbul, Türkiye</li>
+                </ul>
+            </div>
+        </div>
+        <div
+            class="max-w-[1600px] mx-auto mt-12 pt-8 border-t border-surface-container flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="font-label text-xs text-on-surface-variant">© 2023 MergenScan. Tüm hakları saklıdır.</p>
+            <div class="flex gap-4 font-label text-xs text-on-surface-variant">
+                <a class="hover:text-primary transition-colors" href="#">Gizlilik Politikası</a>
+                <a class="hover:text-primary transition-colors" href="#">Kullanım Şartları</a>
+            </div>
+        </div>
+    </footer>
+    <script>
+        function startScan() {
+            console.log("Scan started for: " + document.getElementById('targetUrl').value);
+            // Implementation for scanning
+        }
+    </script>
+</body>
+
+</html>

@@ -1,921 +1,487 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html class="light" lang="tr">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MergenScan — Güvenlik Tarayıcı</title>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>MergenScan — Yeni Nesil Siber Güvenlik Tarayıcı</title>
+  <meta name="description" content="SQL Injection, XSS, CSRF dahil 12 farklı güvenlik testiyle web uygulamanızı saniyeler içinde tarar ve raporlar." />
   <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,600&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap"
-    rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-error-container": "#410002",
+            "surface-container-low": "#f3f3f4",
+            "outline-variant": "#c6c6c6",
+            "surface-bright": "#f9f9f9",
+            "error-container": "#ffdad6",
+            "surface-container-highest": "#e2e2e2",
+            "on-secondary-fixed-variant": "#3c3b3b",
+            "on-primary-fixed-variant": "#e2e2e2",
+            "inverse-on-surface": "#f0f1f1",
+            "background": "#f9f9f9",
+            "secondary": "#5f5e5e",
+            "error": "#ba1a1a",
+            "on-secondary-container": "#1c1b1b",
+            "outline": "#777777",
+            "on-tertiary-fixed-variant": "#85f8c4",
+            "surface-dim": "#dadada",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed": "#ffffff",
+            "on-primary": "#e2e2e2",
+            "tertiary-fixed": "#006c4a",
+            "primary-fixed-dim": "#474747",
+            "on-surface": "#1a1c1c",
+            "secondary-fixed-dim": "#adabaa",
+            "surface-tint": "#5e5e5e",
+            "primary-container": "#3b3b3b",
+            "surface-container": "#eeeeee",
+            "inverse-surface": "#2f3131",
+            "on-secondary-fixed": "#1c1b1b",
+            "on-tertiary-fixed": "#ffffff",
+            "on-tertiary-container": "#ffffff",
+            "on-error": "#ffffff",
+            "surface": "#f9f9f9",
+            "primary": "#000000",
+            "tertiary-fixed-dim": "#005137",
+            "tertiary-container": "#00855d",
+            "on-tertiary": "#85f8c4",
+            "surface-container-high": "#e8e8e8",
+            "on-background": "#1a1c1c",
+            "surface-variant": "#e2e2e2",
+            "on-primary-container": "#ffffff",
+            "secondary-container": "#d6d4d3",
+            "surface-container-lowest": "#ffffff",
+            "tertiary": "#00452e",
+            "primary-fixed": "#5e5e5e",
+            "secondary-fixed": "#c8c6c5",
+            "on-surface-variant": "#474747",
+            "inverse-primary": "#c6c6c6",
+            "sev-high": "#a51c1c",
+            "sev-high-bg": "#fdf0f0",
+            "sev-medium": "#8a5c00",
+            "sev-medium-bg": "#fdf6e8",
+            "sev-low": "#1c4fa5",
+            "sev-low-bg": "#eff4fd",
+            "sev-pass": "#1a6b3a",
+            "sev-pass-bg": "#eef7f2"
+          },
+          borderRadius: {
+            DEFAULT: "0.125rem",
+            lg: "0.25rem",
+            xl: "0.5rem",
+            full: "0.75rem"
+          },
+          fontFamily: {
+            headline: ["Inter", "sans-serif"],
+            body: ["Inter", "sans-serif"],
+            label: ["Inter", "sans-serif"],
+            mono: ["Inter", "sans-serif"],
+            sans: ["Inter", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    body { font-family: 'Inter', sans-serif; }
+
+    .glass-panel {
+      background-color: rgba(249, 249, 249, 0.8);
+      backdrop-filter: blur(20px);
     }
 
-    html {
-      scroll-behavior: smooth;
+    .ambient-shadow {
+      box-shadow: 0 24px 40px -12px rgba(26, 28, 28, 0.06);
     }
 
-    :root {
-      --ink: #111010;
-      --ink-2: #3a3839;
-      --ink-3: #7a7675;
-      --ink-4: #b8b4b3;
-      --ink-5: #dbd7d6;
-      --paper: #f5f3f0;
-      --paper-2: #eeebe7;
-      --paper-3: #e4e0db;
-      --white: #fefefe;
-      --green: #1a6b3a;
-      --green-bg: #eef7f2;
-      --green-border: #c0deca;
-      --amber: #8a5c00;
-      --amber-bg: #fdf6e8;
-      --amber-border: #e0c980;
-      --red: #a51c1c;
-      --red-bg: #fdf0f0;
-      --red-border: #e0b0b0;
-      --blue: #1c4fa5;
-      --blue-bg: #eff4fd;
-      --blue-border: #b0c8e8;
-      --mono: 'DM Mono', monospace;
-      --sans: 'DM Sans', sans-serif;
-      --serif: 'Fraunces', serif;
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
-    }
-
-    body {
-      background: var(--paper);
-      color: var(--ink);
-      font-family: var(--sans);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    h1,
-    h2,
-    h3 {
-      font-family: var(--serif);
-      font-weight: 700;
-      letter-spacing: -0.025em;
-    }
-
-    .container {
-      max-width: 1040px;
-      margin: 0 auto;
-      padding: 0 28px 80px;
-    }
-
-    nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 18px 28px;
-      max-width: 1040px;
-      margin: 0 auto;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-
-    .logo-mark {
-      width: 30px;
-      height: 30px;
-      border: 1.5px solid var(--ink);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-family: var(--mono);
-      font-weight: 600;
-      color: var(--ink);
-    }
-
-    .logo-text {
-      font-family: var(--serif);
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--ink);
-    }
-
-    .nav-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--ink-3);
-      border: 1px solid var(--paper-3);
-      padding: 5px 12px;
-      border-radius: 20px;
-    }
-
-    .nav-badge-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: breathe 2.5s ease-in-out infinite;
-    }
-
-    @keyframes breathe {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.35;
-      }
-    }
-
-    .divider {
-      height: 1px;
-      background: var(--paper-3);
-      margin: 0 28px;
-    }
-
-    .hero {
-      padding: 64px 0 48px;
-      text-align: center;
-    }
-
-    .hero-eyebrow {
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--ink-3);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 22px;
-    }
-
-    .hero h1 {
-      font-size: clamp(36px, 5.5vw, 66px);
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
-
-    .hero-sub {
-      font-size: 17px;
-      color: var(--ink-2);
-      max-width: 420px;
-      margin: 0 auto 40px;
-    }
-
-    .scanner-wrap {
-      max-width: 580px;
-      margin: 0 auto;
-    }
-
-    .scanner-box {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--white);
-      border: 1px solid var(--paper-3);
-      border-radius: 10px;
-      padding: 7px 7px 7px 18px;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .url-input {
-      flex: 1;
-      border: none;
-      background: transparent;
-      font-family: var(--mono);
-      font-size: 15px;
-      outline: none;
-    }
-
-    .btn-scan {
-      background: var(--ink);
-      color: var(--white);
-      border: none;
-      border-radius: 7px;
-      padding: 11px 22px;
-      font-family: var(--sans);
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .btn-scan:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .scanner-actions {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 10px;
-      padding: 0 2px;
-    }
-
-    .scanner-hint {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--ink-4);
-    }
-
-    .btn-modules {
-      background: transparent;
-      border: 1px solid var(--paper-3);
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--ink-3);
-      cursor: pointer;
-    }
-
-    .dropdown-container {
+    .status-pulse {
       position: relative;
+      width: 8px;
+      height: 8px;
+      background-color: #00452e;
+      border-radius: 50%;
     }
 
-    .dropdown-menu {
-      display: none;
-      position: absolute;
-      top: 100%;
-      right: 0;
-      background: var(--white);
-      border: 1px solid var(--paper-3);
-      border-radius: 12px;
-      padding: 16px;
-      min-width: 440px;
-      max-width: 95vw;
-      box-shadow: var(--shadow-md);
-      z-index: 100;
-    }
-
-    @media (max-width: 480px) {
-      .dropdown-menu {
-        min-width: unset;
-        width: calc(100vw - 40px);
-        /* ekran genişliği - kenar boşlukları */
-        right: -10px;
-        /* sağa taşmasın */
-      }
-
-      .modules-grid {
-        grid-template-columns: 1fr;
-        /* tek sütun olsun */
-      }
-    }
-
-    .dropdown-menu.active {
-      display: block;
-    }
-
-    .dropdown-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .modules-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-      margin-top: 10px;
-    }
-
-    .module-toggle {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--paper);
-      border: 1px solid var(--paper-3);
-      border-radius: 7px;
-      padding: 10px 12px;
-      cursor: pointer;
-    }
-
-    .module-toggle.active {
-      border-color: var(--ink-4);
-      background: var(--white);
-    }
-
-    .module-toggle input {
-      display: none;
-    }
-
-    .toggle-dot {
-      width: 32px;
-      height: 18px;
-      background: var(--paper-3);
-      border-radius: 9px;
-      position: relative;
-      flex-shrink: 0;
-    }
-
-    .module-toggle.active .toggle-dot {
-      background: var(--ink);
-    }
-
-    .toggle-dot::after {
+    .status-pulse::after {
       content: '';
       position: absolute;
-      width: 12px;
-      height: 12px;
-      background: var(--white);
+      top: -4px; left: -4px; right: -4px; bottom: -4px;
       border-radius: 50%;
-      top: 3px;
-      left: 3px;
+      background-color: rgba(0, 133, 93, 0.5);
+      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      80%, 100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    /* Module Dropdown */
+    .module-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 20px;
+      min-width: 480px;
+      max-width: 95vw;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+      z-index: 200;
+    }
+    .module-dropdown.active { display: block; }
+
+    @media (max-width: 550px) {
+      .module-dropdown {
+        min-width: unset;
+        width: calc(100vw - 32px);
+        right: -8px;
+      }
+    }
+
+    /* Toggle Switch */
+    .toggle-track {
+      width: 36px; height: 20px;
+      background: #dadada;
+      border-radius: 10px;
+      position: relative;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .module-item.active .toggle-track { background: #000; }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px; left: 3px;
       transition: transform 0.2s;
     }
-
-    .module-toggle.active .toggle-dot::after {
-      transform: translateX(14px);
+    .module-item.active .toggle-track::after {
+      transform: translateX(16px);
     }
 
-    .module-info .name {
-      font-size: 13px;
-      font-weight: 500;
-    }
-
-    .stats-strip {
-      display: flex;
-      justify-content: center;
-      border-top: 1px solid var(--paper-3);
-      border-bottom: 1px solid var(--paper-3);
-      margin-top: 56px;
-    }
-
-    .stat-item {
-      flex: 1;
-      text-align: center;
-      padding: 20px;
-      border-right: 1px solid var(--paper-3);
-    }
-
-    .stat-item:last-child {
-      border-right: none;
-    }
-
-    .stat-num {
-      font-family: var(--serif);
-      font-size: 28px;
-      font-weight: 700;
-      display: block;
-    }
-
-    .stat-label {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--ink-4);
-    }
-
-    .progress-section {
-      display: none;
-      padding: 64px 0;
-      text-align: center;
-    }
-
-    .progress-bar-bg {
-      width: 100%;
-      max-width: 460px;
-      height: 3px;
-      background: var(--paper-3);
-      margin: 0 auto 32px;
-    }
-
-    .progress-bar-fill {
+    /* Progress bar animation */
+    .progress-fill {
       height: 100%;
-      background: var(--ink);
+      background: #000;
       width: 0%;
-      transition: width 0.5s;
+      transition: width 0.5s ease;
+      border-radius: 2px;
     }
 
-    .spinner-text {
-      font-family: var(--serif);
-      font-size: 22px;
-      margin-bottom: 10px;
+    /* Scanner pulse animation */
+    @keyframes scanner-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
+    .scanner-pulse { animation: scanner-pulse 1.5s ease-in-out infinite; }
 
-    .spinner-sub {
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--ink-3);
-    }
+    /* Finding card */
+    .finding-body { display: none; }
+    .finding-card.open .finding-body { display: block; }
+    .finding-card.open .finding-chevron { transform: rotate(180deg); }
+    .finding-chevron { transition: transform 0.2s; }
 
-    .results-section {
-      display: none;
+    /* Fade in animation */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
     }
+    .fade-in-up { animation: fadeInUp 0.5s ease both; }
 
-    .results-section.visible {
-      display: block;
-    }
-
-    .results-top {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 32px;
-    }
-
-    .results-title {
-      font-family: var(--serif);
-      font-size: 30px;
-    }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 28px;
-    }
-
-    .stat-card {
-      background: var(--white);
-      border: 1px solid var(--paper-3);
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
-    }
-
-    .stat-card .stat-num {
-      font-size: 30px;
-      font-weight: 700;
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    .stat-lbl {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--ink-3);
-    }
-
-    .stat-red .stat-num {
-      color: var(--red);
-    }
-
-    .stat-orange .stat-num {
-      color: var(--amber);
-    }
-
-    .stat-blue .stat-num {
-      color: var(--blue);
-    }
-
-    .stat-green .stat-num {
-      color: var(--green);
-    }
-
-    .finding-card {
-      background: var(--white);
-      border: 1px solid var(--paper-3);
-      border-radius: 8px;
-      margin-bottom: 8px;
-    }
-
-    .finding-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .severity-pip {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .sev-high {
-      background: var(--red);
-    }
-
-    .sev-medium {
-      background: var(--amber);
-    }
-
-    .sev-low {
-      background: var(--blue);
-    }
-
-    .sev-pass {
-      background: var(--green);
-    }
-
-    .finding-title {
-      font-weight: 600;
-      flex: 1;
-    }
-
-    .severity-tag {
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 600;
-      padding: 3px 9px;
-      border-radius: 3px;
-    }
-
-    .tag-high {
-      background: var(--red-bg);
-      color: var(--red);
-    }
-
-    .tag-medium {
-      background: var(--amber-bg);
-      color: var(--amber);
-    }
-
-    .tag-low {
-      background: var(--blue-bg);
-      color: var(--blue);
-    }
-
-    .finding-body {
-      display: none;
-      padding: 0 16px 16px;
-      border-top: 1px solid var(--paper-2);
-    }
-
-    .finding-card.open .finding-body {
-      display: block;
-    }
-
-    .finding-detail {
-      background: var(--paper);
-      padding: 12px;
-      margin-top: 14px;
-      font-family: var(--mono);
-      font-size: 13px;
-      border-radius: 4px;
-    }
-
-    .remediation {
-      margin-top: 10px;
-      font-size: 14px;
-      color: var(--ink-2);
-    }
-
-    .news-section {
-      border-top: 1px solid var(--paper-3);
-      padding-top: 56px;
-      margin-top: 56px;
-    }
-
-    .news-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-    }
-
-    .news-card {
-      display: flex;
-      flex-direction: column;
-      background: var(--white);
-      border: 1px solid var(--paper-3);
-      border-radius: 8px;
-      text-decoration: none;
-      color: var(--ink);
-      overflow: hidden;
-      transition: box-shadow 0.2s;
-    }
-
-    .news-card:hover {
-      box-shadow: var(--shadow-md);
-    }
-
-    .news-img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
-      background: var(--paper-2);
-    }
-
-    .news-body {
-      padding: 14px;
-    }
-
-    .news-title {
-      font-weight: 600;
-      font-size: 15px;
-      margin-bottom: 5px;
-    }
-
-    /* ══ COVER ══ */
-    .cover {
-      position: relative;
-      min-height: 100vh;
-      background: #0c0c0c;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .cover::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: radial-gradient(circle, rgba(255,255,255,0.065) 1px, transparent 1px);
-      background-size: 28px 28px;
-      pointer-events: none;
-    }
-    .cover-glow {
-      position: absolute;
-      top: -180px; left: 50%;
-      transform: translateX(-50%);
-      width: 900px; height: 600px;
-      background: radial-gradient(ellipse, rgba(26,107,58,0.2) 0%, transparent 65%);
-      pointer-events: none;
-    }
-    .cover-fade {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 200px;
-      background: linear-gradient(to bottom, transparent, #f5f3f0);
-      pointer-events: none;
-      z-index: 5;
-    }
-    .cover-nav {
-      position: relative; z-index: 10;
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 22px 40px;
-      max-width: 1040px; margin: 0 auto; width: 100%;
-    }
-    .cover-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
-    .cover-logo-mark {
-      width:30px; height:30px;
-      border:1px solid rgba(255,255,255,0.15);
-      border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      font-family:'DM Mono',monospace; font-size:13px; font-weight:600;
-      color:rgba(255,255,255,0.8);
-    }
-    .cover-logo-text {
-      font-family:'Fraunces',serif; font-size:20px; font-weight:700;
-      color:rgba(255,255,255,0.9);
-    }
-    .cover-badge {
-      display:flex; align-items:center; gap:6px;
-      font-family:'DM Mono',monospace; font-size:12px;
-      color:rgba(255,255,255,0.3);
-      border:1px solid rgba(255,255,255,0.1);
-      padding:5px 13px; border-radius:20px;
-    }
-    .cover-badge-dot {
-      width:6px; height:6px; border-radius:50%;
-      background:#1a6b3a;
-      animation:breathe 2.5s ease-in-out infinite;
-    }
-    .cover-body {
-      position:relative; z-index:10; flex:1;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      text-align:center; padding:40px 28px 130px;
-    }
-    .cover-tag {
-      display:inline-flex; align-items:center; gap:7px;
-      font-family:'DM Mono',monospace; font-size:11px;
-      letter-spacing:.1em; text-transform:uppercase;
-      color:#1a6b3a;
-      border:1px solid rgba(26,107,58,0.3);
-      background:rgba(26,107,58,0.08);
-      padding:5px 14px; border-radius:20px;
-      margin-bottom:32px;
-      animation:coverRise .8s cubic-bezier(.16,1,.3,1) both;
-    }
-    .cover-tag-dot {
-      width:5px; height:5px; border-radius:50%;
-      background:#1a6b3a;
-      animation:breathe 2.5s ease-in-out infinite;
-    }
-    .cover-title {
-      font-family:'Fraunces',serif;
-      font-size:clamp(44px,6.5vw,84px);
-      font-weight:600; line-height:1.05;
-      letter-spacing:-.03em; color:#fff;
-      margin-bottom:20px;
-      animation:coverRise .8s .07s cubic-bezier(.16,1,.3,1) both;
-    }
-    .cover-title em { font-style:italic; color:#4ade80; }
-    .cover-desc {
-      font-family:'DM Sans',sans-serif;
-      font-size:16px; color:rgba(255,255,255,0.45);
-      line-height:1.7; max-width:440px;
-      margin-bottom:46px;
-      animation:coverRise .8s .14s cubic-bezier(.16,1,.3,1) both;
-    }
-    .cover-pills {
-      display:flex; flex-wrap:wrap; justify-content:center;
-      gap:7px; margin-bottom:50px;
-      animation:coverRise .8s .2s cubic-bezier(.16,1,.3,1) both;
-    }
-    .cover-pill {
-      font-family:'DM Mono',monospace; font-size:11px;
-      padding:4px 12px; border-radius:20px;
-      color:rgba(255,255,255,0.3);
-      border:1px solid rgba(255,255,255,0.07);
-    }
-    .cover-pill.high   { color:#f87171; border-color:rgba(248,113,113,.2); }
-    .cover-pill.medium { color:#fbbf24; border-color:rgba(251,191,36,.2); }
-    .cover-pill.low    { color:#60a5fa; border-color:rgba(96,165,250,.2); }
-    .cover-pill.safe   { color:#4ade80; border-color:rgba(74,222,128,.2); }
-    .cover-cta {
-      display:inline-flex; align-items:center; gap:10px;
-      background:#fff; color:#0c0c0c;
-      border:none; border-radius:8px;
-      padding:13px 26px;
-      font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600;
-      cursor:pointer;
-      transition:background .15s, transform .15s;
-      animation:coverRise .8s .26s cubic-bezier(.16,1,.3,1) both;
-    }
-    .cover-cta:hover { background:#ece9e5; transform:translateY(-1px); }
-    .cover-arrow {
-      position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
-      z-index:10;
-      display:flex; flex-direction:column; align-items:center; gap:6px;
-      cursor:pointer;
-      animation:coverRise .8s .38s cubic-bezier(.16,1,.3,1) both;
-    }
-    .cover-arrow span {
-      font-family:'DM Mono',monospace; font-size:10px;
-      letter-spacing:.1em; text-transform:uppercase;
-      color:rgba(255,255,255,0.18);
-    }
-    .cover-arrow-icon { animation:arrowBounce 2s ease-in-out infinite; }
-    @keyframes arrowBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
-    @keyframes coverRise {
-      from{opacity:0;transform:translateY(22px)}
-      to{opacity:1;transform:translateY(0)}
-    }
-    .cover-stats {
-      position:relative; z-index:10;
-      display:flex;
-      border-top:1px solid rgba(255,255,255,0.06);
-    }
-    .cover-stat {
-      flex:1; text-align:center; padding:18px;
-      border-right:1px solid rgba(255,255,255,0.06);
-    }
-    .cover-stat:last-child { border-right:none; }
-    .cover-stat-n {
-      display:block;
-      font-family:'DM Mono',monospace; font-size:18px; font-weight:500;
-      color:rgba(255,255,255,0.65); margin-bottom:2px;
-    }
-    .cover-stat-l {
-      font-family:'DM Mono',monospace; font-size:11px;
-      color:rgba(255,255,255,0.22);
-    }
-    @media(max-width:600px){
-      .cover-pills,.cover-stats{display:none;}
-      .cover-nav{padding:16px 20px;}
-    }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 3px; }
   </style>
 </head>
 
-<body>
-  <!-- ══ COVER ══ -->
-  <div class="cover">
-    <div class="cover-glow"></div>
-    <div class="cover-fade"></div>
-    <nav class="cover-nav">
-      <a href="#" class="cover-logo">
-        <div class="cover-logo-mark">MS</div>
-        <span class="cover-logo-text">MergenScan</span>
-      </a>
-      <div class="cover-badge">
-        <div class="cover-badge-dot"></div>Canlı Tarayıcı
+<body class="bg-surface text-on-surface antialiased selection:bg-primary selection:text-on-primary">
+
+  <!-- ═══ TOP NAVIGATION ═══ -->
+  <nav class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 glass-panel border-b border-surface-container-low md:border-none">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+        <span class="text-on-primary text-xs font-black tracking-tighter">MS</span>
       </div>
-    </nav>
-    <div class="cover-body">
-      <div class="cover-tag">
-        <span class="cover-tag-dot"></span>Web Güvenlik Tarayıcısı
-      </div>
-      <h1 class="cover-title">
-        Açıklarınızı biz bulmadan<br><em>siz bulun.</em>
-      </h1>
-      <p class="cover-desc">
-        SQL Injection, XSS, CSRF dahil 12 farklı güvenlik testiyle<br>
-        web uygulamanızı saniyeler içinde tarar ve raporlar.
-      </p>
-      <div class="cover-pills">
-        <span class="cover-pill high">SQL Injection</span>
-        <span class="cover-pill high">Cmd Injection</span>
-        <span class="cover-pill high">Path Traversal</span>
-        <span class="cover-pill medium">XSS</span>
-        <span class="cover-pill medium">CSRF</span>
-        <span class="cover-pill medium">Open Redirect</span>
-        <span class="cover-pill low">HTTP Headers</span>
-        <span class="cover-pill low">CORS / SSL</span>
-        <span class="cover-pill safe">WAF Tespiti</span>
-        <span class="cover-pill safe">Hassas Dosyalar</span>
-      </div>
-      <button class="cover-cta" onclick="document.getElementById('appStart').scrollIntoView({behavior:'smooth'})">
-        Taramayı Başlat
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-          <path d="M7.5 2v11M2 8l5.5 5.5L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+      <span class="text-xl font-black tracking-tighter uppercase hidden md:block">MergenScan</span>
+    </div>
+    <div class="flex items-center gap-6">
+
+      <button
+        class="bg-primary text-on-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:opacity-90 transition-opacity active:scale-[0.99]"
+        onclick="document.getElementById('targetUrl').focus(); document.getElementById('targetUrl').scrollIntoView({behavior:'smooth', block:'center'})">
+        TARAMAYI BAŞLAT
       </button>
     </div>
-    <div class="cover-arrow" onclick="document.getElementById('appStart').scrollIntoView({behavior:'smooth'})">
-      <span>aşağı kaydır</span>
-      <div class="cover-arrow-icon">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M8 2v12M3 9l5 5 5-5" stroke="rgba(255,255,255,0.22)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-    </div>
-    <div class="cover-stats">
-      <div class="cover-stat"><span class="cover-stat-n">12</span><span class="cover-stat-l">Test Modülü</span></div>
-      <div class="cover-stat"><span class="cover-stat-n">~30s</span><span class="cover-stat-l">Ortalama Süre</span></div>
-      <div class="cover-stat"><span class="cover-stat-n">OWASP</span><span class="cover-stat-l">Top 10 Kapsam</span></div>
-      <div class="cover-stat"><span class="cover-stat-n">0</span><span class="cover-stat-l">Veri Kaydedilmez</span></div>
-    </div>
-  </div>
-
-  <nav id="appStart">
-
-    <a href="#" class="logo">
-      <div class="logo-mark">MS</div>
-      <span class="logo-text">MergenScan</span>
-    </a>
-    <div class="nav-badge">
-      <div class="nav-badge-dot"></div>Canlı Tarayıcı
-    </div>
   </nav>
-  <div class="divider"></div>
 
-  <div class="container">
-    <div id="mainContent">
-      <section class="hero">
-        <div class="hero-eyebrow">Güvenlik Taraması</div>
-        <h1>Web uygulamanızdaki açıkları <em>tespit edin.</em></h1>
-        <p class="hero-sub">SQL Injection, XSS, CSRF dahil 12 farklı testle güvenlik açıklarını otomatik olarak tarar ve
-          raporlar.</p>
-        <div class="scanner-wrap">
-          <div class="scanner-box">
-            <input type="text" class="url-input" id="targetUrl" placeholder="https://site-adresi.com"
-              onkeydown="if(event.key==='Enter') startScan()">
-            <button class="btn-scan" id="btnScan" onclick="startScan()">Tara</button>
+  <main class="w-full">
+    <!-- ═══ HERO SECTION ═══ -->
+    <section id="heroSection" class="relative pt-20 pb-28 px-8 md:px-16 max-w-[1600px] mx-auto min-h-[860px] flex flex-col justify-center">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+        <!-- Hero Content -->
+        <div class="lg:col-span-7 flex flex-col gap-8 z-10" id="mainContent">
+          <div class="inline-flex items-center gap-3 bg-surface-container-lowest py-2 px-4 rounded-full self-start ambient-shadow">
+            <div class="status-pulse"></div>
+            <span class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-tertiary">SİSTEM AKTİF &amp; İZLEMEDE</span>
           </div>
-          <div class="scanner-actions">
-            <span class="scanner-hint">Enter ile taramayı başlat</span>
-            <div class="dropdown-container">
-              <button class="btn-modules"
-                onclick="document.getElementById('moduleDropdown').classList.toggle('active')">Modüller</button>
-              <div class="dropdown-menu" id="moduleDropdown">
-                <div class="dropdown-header">
-                  <h3>Test Modülleri</h3>
+
+          <h1 class="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface leading-[1.05]">
+            Yeni Nesil Siber Güvenlik: <br /><span class="text-primary">MergenScan</span>
+          </h1>
+
+          <p class="font-body text-lg md:text-xl text-on-surface-variant max-w-2xl leading-relaxed">
+            SQL Injection, XSS, CSRF dahil 12 farklı güvenlik testiyle web uygulamanızı saniyeler içinde tarar ve raporlar.
+          </p>
+
+          <!-- Scanner Input -->
+          <div class="mt-4 max-w-2xl bg-surface-container-lowest p-2 rounded-sm flex flex-col sm:flex-row gap-2 ambient-shadow relative" id="scannerBox">
+            <div class="flex-1 relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">language</span>
+              <input
+                class="w-full bg-surface border-none h-14 pl-12 pr-4 text-base focus:ring-0 focus:outline-none transition-all rounded-sm placeholder:text-on-surface-variant/60 font-body"
+                id="targetUrl"
+                placeholder="https://site-adresi.com"
+                type="text"
+                onkeydown="if(event.key==='Enter') startScan()" />
+            </div>
+            <button
+              class="bg-primary text-on-primary h-14 px-8 font-bold uppercase tracking-wider text-sm hover:opacity-90 transition-opacity whitespace-nowrap flex items-center justify-center gap-2 rounded-l-sm"
+              id="btnScan"
+              onclick="startScan()">
+              <span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">radar</span>
+              ANALİZ ET
+            </button>
+            <div class="relative">
+              <button
+                class="bg-primary text-on-primary h-14 w-12 flex items-center justify-center border-l border-white/20 hover:opacity-90 transition-opacity rounded-r-sm"
+                id="btnModules"
+                onclick="document.getElementById('moduleDropdown').classList.toggle('active')">
+                <span class="material-symbols-outlined text-xl">tune</span>
+              </button>
+              <!-- Module Dropdown -->
+              <div class="module-dropdown" id="moduleDropdown">
+                <div class="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 class="font-headline text-sm font-bold uppercase tracking-wide">Test Modülleri</h3>
+                    <p class="font-label text-xs text-on-surface-variant mt-1">Taramak istediğiniz modülleri seçin</p>
+                  </div>
                   <button onclick="document.getElementById('moduleDropdown').classList.remove('active')"
-                    style="background:none;border:none;cursor:pointer;font-size:16px">✕</button>
+                    class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                  </button>
                 </div>
-                <div class="modules-grid" id="modulesGrid"></div>
+                <div class="grid grid-cols-2 gap-2" id="modulesGrid"></div>
+                <div class="flex justify-between items-center mt-4 pt-4 border-t border-surface-container-low">
+                  <span class="font-label text-xs text-on-surface-variant" id="moduleCount">12 / 12 seçili</span>
+                  <button onclick="toggleAllModules()" class="font-label text-xs font-bold uppercase tracking-wider text-primary hover:underline">Tümünü Değiştir</button>
+                </div>
               </div>
             </div>
           </div>
+
+          <div class="flex items-center gap-4 mt-1">
+            <span class="font-label text-[0.6875rem] text-on-surface-variant/60 uppercase tracking-widest">Enter ile taramayı başlat</span>
+          </div>
+
+          <!-- Trust Metrics -->
+          <div class="grid grid-cols-3 gap-8 mt-8 border-t border-surface-container-low pt-8" id="trustMetrics">
+            <div>
+              <p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">12</p>
+              <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">TEST MODÜLÜ</p>
+            </div>
+            <div>
+              <p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">~30s</p>
+              <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">ORT. TARAMA SÜRESİ</p>
+            </div>
+            <div>
+              <p class="font-headline text-3xl font-bold tracking-tighter text-on-surface">Mergen</p>
+              <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">SCAN KORUMA</p>
+            </div>
+          </div>
         </div>
-      </section>
-    </div>
 
-    <div class="progress-section" id="progressSection">
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progressFill"></div>
-      </div>
-      <div class="spinner-text" id="spinnerText">Taranıyor…</div>
-      <div class="spinner-sub" id="spinnerSub">// başlatılıyor</div>
-    </div>
+        <!-- ═══ PROGRESS SECTION ═══ -->
+        <div class="lg:col-span-7 flex flex-col gap-8 z-10" id="progressSection" style="display:none;">
+          <div class="max-w-2xl">
+            <div class="inline-flex items-center gap-3 bg-surface-container-lowest py-2 px-4 rounded-full self-start ambient-shadow mb-8">
+              <div class="status-pulse"></div>
+              <span class="font-label text-[0.6875rem] uppercase tracking-widest font-semibold text-tertiary scanner-pulse">TARAMA DEVAM EDİYOR</span>
+            </div>
 
-    <div class="results-section" id="resultsSection">
-      <div class="results-top">
-        <h2 class="results-title">Tarama Sonuçları</h2>
-      </div>
-      <div class="summary-grid" id="summaryGrid"></div>
-      <div id="findingsList"></div>
-      <button class="btn-scan" style="margin:20px auto; display:block" onclick="location.reload()">↺ Yeni
-        Tarama</button>
-    </div>
+            <h2 class="font-headline text-4xl md:text-5xl font-bold tracking-tighter text-on-surface mb-4" id="spinnerText">Taranıyor…</h2>
+            <p class="font-body text-lg text-on-surface-variant mb-8" id="spinnerSub">// başlatılıyor</p>
 
-    <section class="news-section">
-      <h2>Güvenlik Haberleri</h2><br>
-      <div class="news-grid" id="newsGrid">
-        <p>Haberler yükleniyor...</p>
+            <div class="w-full h-1 bg-surface-container-high rounded-full mb-6">
+              <div class="progress-fill rounded-full" id="progressFill"></div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <button onclick="cancelCurrentScan()" class="bg-transparent border border-outline/20 text-on-surface px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">stop</span>
+                İPTAL ET
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ RESULTS SECTION ═══ -->
+        <div class="lg:col-span-12 flex flex-col gap-8 z-10" id="resultsSection" style="display:none;">
+          <div class="max-w-5xl w-full mx-auto">
+            <!-- Results Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+              <div>
+                <h2 class="font-headline text-3xl md:text-4xl font-bold tracking-tighter text-on-surface">Tarama Sonuçları</h2>
+                <p class="font-body text-on-surface-variant mt-1" id="resultUrlLabel"></p>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="exportPDF()" class="bg-transparent border border-outline/20 text-on-surface px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
+                  <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                  PDF
+                </button>
+                <button onclick="location.reload()" class="bg-primary text-on-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-sm hover:opacity-90 transition-opacity flex items-center gap-2">
+                  <span class="material-symbols-outlined text-sm">refresh</span>
+                  YENİ TARAMA
+                </button>
+              </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="summaryGrid"></div>
+
+            <!-- Findings List -->
+            <div id="findingsList" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- Hero Visual / Bento Grid -->
+        <div class="lg:col-span-5 hidden lg:grid grid-cols-2 gap-4 h-[600px] relative" id="bentoGrid">
+          <div class="absolute inset-0 bg-surface-container-low rounded-xl -z-10 translate-x-4 translate-y-4"></div>
+          <!-- Threat Map Card -->
+          <div class="col-span-2 bg-surface-container-lowest rounded-lg p-6 ambient-shadow flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-headline text-sm font-bold text-on-surface uppercase tracking-wide">GERÇEK ZAMANLI TEHDİT HARİTASI</h3>
+                <p class="font-label text-xs text-on-surface-variant mt-1">Son 24 Saat — <span id="threatCounter" class="font-semibold text-sev-high">0</span> tehdit engellendi</p>
+              </div>
+
+            </div>
+            <div class="h-[450px] w-full mt-4 rounded-lg relative overflow-hidden bg-white pointer-events-auto" style="border:1px solid rgba(0,0,0,0.06)">
+              <!-- Crop top branding and bottom stats bar -->
+              <iframe src="https://cybermap.kaspersky.com/tr/widget/dynamic/light" frameborder="0" style="position: absolute; top: -48px; left: -5px; width: calc(100% + 10px); height: calc(100% + 128px);"></iframe>
+            </div>
+          </div>
+          <!-- Live Stats Cards -->
+          <div class="col-span-1 bg-surface-container-lowest rounded-lg p-6 ambient-shadow flex flex-col gap-4">
+            <span class="material-symbols-outlined text-3xl text-sev-high mb-auto" style="font-variation-settings: 'FILL' 1;">gpp_bad</span>
+            <div>
+              <p class="font-headline text-2xl font-bold tracking-tighter" id="blockedCount">0</p>
+              <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-1">ENGELLENEN SALDIRI</p>
+            </div>
+          </div>
+          <div class="col-span-1 bg-primary rounded-lg p-6 flex flex-col gap-4 shadow-lg">
+            <span class="material-symbols-outlined text-3xl text-on-primary mb-auto">monitoring</span>
+            <div>
+              <p class="font-headline text-2xl font-bold tracking-tighter text-on-primary" id="activeNodesCount">14</p>
+              <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-primary/70 mt-1">AKTİF DÜĞÜM</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
-  </div>
 
+    <!-- ═══ NEWS SECTION ═══ -->
+    <section class="py-24 px-8 md:px-16 max-w-[1600px] mx-auto bg-surface border-t border-surface-container-low">
+      <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+        <div class="max-w-xl">
+          <h2 class="font-headline text-3xl md:text-4xl font-bold tracking-tighter text-on-surface mb-4">
+            Güvenlik Dünyasından Güncel Haberler</h2>
+          <p class="font-body text-on-surface-variant">Siber güvenlik trendleri, yapısal analizler ve sektördeki en son gelişmeleri inceleyin.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="newsGrid">
+        <!-- Loading skeleton -->
+        <div class="bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow animate-pulse">
+          <div class="h-56 bg-surface-container-high"></div>
+          <div class="p-6"><div class="h-4 bg-surface-container-high rounded w-3/4 mb-3"></div><div class="h-3 bg-surface-container-high rounded w-1/2"></div></div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow animate-pulse hidden md:block">
+          <div class="h-56 bg-surface-container-high"></div>
+          <div class="p-6"><div class="h-4 bg-surface-container-high rounded w-3/4 mb-3"></div><div class="h-3 bg-surface-container-high rounded w-1/2"></div></div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow animate-pulse hidden lg:block">
+          <div class="h-56 bg-surface-container-high"></div>
+          <div class="p-6"><div class="h-4 bg-surface-container-high rounded w-3/4 mb-3"></div><div class="h-3 bg-surface-container-high rounded w-1/2"></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="bg-surface-container-low border-t border-surface-container px-8 py-12">
+    <div class="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div class="col-span-1 md:col-span-1">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+            <span class="text-on-primary text-xs font-black tracking-tighter">MS</span>
+          </div>
+          <span class="text-xl font-black tracking-tighter uppercase text-on-surface">MERGENSCAN</span>
+        </div>
+        <p class="font-label text-xs text-on-surface-variant max-w-xs leading-relaxed">Mimari güvenlik yaklaşımıyla modern dijital altyapıları koruyan yeni nesil analiz ve gözlem platformu.</p>
+      </div>
+      <div>
+        <h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">ÇÖZÜMLER</h4>
+        <ul class="space-y-2 font-body text-sm text-on-surface-variant">
+          <li><a class="hover:text-primary transition-colors" href="#">Zafiyet Taraması</a></li>
+          <li><a class="hover:text-primary transition-colors" href="#">Altyapı Analizi</a></li>
+          <li><a class="hover:text-primary transition-colors" href="#">Sürekli İzleme</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">ŞİRKET</h4>
+        <ul class="space-y-2 font-body text-sm text-on-surface-variant">
+          <li><a class="hover:text-primary transition-colors" href="#">Hakkımızda</a></li>
+          <li><a class="hover:text-primary transition-colors" href="#">Haberler &amp; Blog</a></li>
+          <li><a class="hover:text-primary transition-colors" href="#">Kariyer</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-headline text-sm font-bold uppercase tracking-widest mb-4">İLETİŞİM</h4>
+        <ul class="space-y-2 font-body text-sm text-on-surface-variant">
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">mail</span> info@mergenscan.com</li>
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">location_on</span> İstanbul, Türkiye</li>
+        </ul>
+      </div>
+    </div>
+    <div class="max-w-[1600px] mx-auto mt-12 pt-8 border-t border-surface-container flex flex-col md:flex-row justify-between items-center gap-4">
+      <p class="font-label text-xs text-on-surface-variant">© 2025 MergenScan. Tüm hakları saklıdır.</p>
+      <div class="flex gap-4 font-label text-xs text-on-surface-variant">
+        <a class="hover:text-primary transition-colors" href="#">Gizlilik Politikası</a>
+        <a class="hover:text-primary transition-colors" href="#">Kullanım Şartları</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══ JAVASCRIPT ═══ -->
   <script>
-    /* ── Yardımcı: XSS koruması ── */
+    /* ── XSS Protection ── */
     function escapeHTML(str) {
       return String(str)
         .replace(/&/g, '&amp;')
@@ -925,72 +491,127 @@
         .replace(/'/g, '&#039;');
     }
 
-    /* ── Modül listesi ── */
+    /* ── Module List ── */
     const modules = [
-      { id: 'sqli', name: 'SQL Injection', desc: 'Veritabanı açıkları' },
-      { id: 'xss', name: 'XSS', desc: 'Script enjeksiyonu' },
-      { id: 'csrf', name: 'CSRF', desc: 'Token kontrolü' },
-      { id: 'headers', name: 'HTTP Headers', desc: 'Güvenlik başlıkları' },
-      { id: 'traversal', name: 'Path Traversal', desc: 'Dizin geçişi' },
-      { id: 'files', name: 'Hassas Dosyalar', desc: '.env, .git vb.' },
-      { id: 'redirect', name: 'Open Redirect', desc: 'Yönlendirme açığı' },
-      { id: 'cmdi', name: 'Cmd Injection', desc: 'Komut enjeksiyonu' },
-      { id: 'cors', name: 'CORS', desc: 'Origin politikası' },
-      { id: 'ssl', name: 'SSL/TLS', desc: 'Sertifika kontrolü' },
-      { id: 'waf', name: 'WAF Tespiti', desc: 'Güvenlik duvarı' },
-      { id: 'robots', name: 'Robots/Sitemap', desc: 'Gizli yollar' },
+      { id: 'sqli',      name: 'SQL Injection',    icon: 'database' },
+      { id: 'xss',       name: 'XSS',              icon: 'code' },
+      { id: 'csrf',      name: 'CSRF',              icon: 'token' },
+      { id: 'headers',   name: 'HTTP Headers',      icon: 'shield' },
+      { id: 'traversal', name: 'Path Traversal',    icon: 'folder_open' },
+      { id: 'files',     name: 'Hassas Dosyalar',   icon: 'lock_open' },
+      { id: 'redirect',  name: 'Open Redirect',     icon: 'open_in_new' },
+      { id: 'cmdi',      name: 'Cmd Injection',     icon: 'terminal' },
+      { id: 'cors',      name: 'CORS',              icon: 'public' },
+      { id: 'ssl',       name: 'SSL/TLS',           icon: 'https' },
+      { id: 'waf',       name: 'WAF Tespiti',       icon: 'security' },
+      { id: 'robots',    name: 'Robots/Sitemap',    icon: 'smart_toy' },
     ];
 
-    /* ── Sayfa yüklenince modülleri oluştur ── */
+    let currentScanId = null;
+    let lastScanResult = null;
+    let scannedUrl = '';
+
+    /* ── Build Module Toggles on Load ── */
     document.addEventListener('DOMContentLoaded', () => {
       const grid = document.getElementById('modulesGrid');
-      grid.innerHTML = modules.map(mod =>
-        `<label class="module-toggle active" data-module="${mod.id}">
-          <input type="checkbox" checked>
-          <div class="toggle-dot"></div>
-          <div class="module-info"><div class="name">${mod.name}</div></div>
-        </label>`
-      ).join('');
+      grid.innerHTML = modules.map(mod => `
+        <label class="module-item active flex items-center gap-3 bg-surface-container-low border border-surface-container-high rounded-lg p-3 cursor-pointer hover:bg-surface-container-high transition-colors" data-module="${mod.id}">
+          <input type="checkbox" checked class="hidden" />
+          <div class="toggle-track"></div>
+          <span class="material-symbols-outlined text-base text-on-surface-variant">${mod.icon}</span>
+          <span class="font-label text-sm font-medium">${mod.name}</span>
+        </label>
+      `).join('');
 
-      /* Toggle tıklaması */
       grid.addEventListener('click', e => {
-        const toggle = e.target.closest('.module-toggle');
-        if (!toggle) return;
-        toggle.classList.toggle('active');
-        const cb = toggle.querySelector('input[type="checkbox"]');
-        if (cb) cb.checked = toggle.classList.contains('active');
+        const item = e.target.closest('.module-item');
+        if (!item) return;
+        item.classList.toggle('active');
+        const cb = item.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = item.classList.contains('active');
+        updateModuleCount();
       });
 
+      updateModuleCount();
       loadNews();
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', e => {
+        const dropdown = document.getElementById('moduleDropdown');
+        const btn = document.getElementById('btnModules');
+        if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+          dropdown.classList.remove('active');
+        }
+      });
     });
 
-    /* ── Seçili modülleri al ── */
+    function updateModuleCount() {
+      const total = modules.length;
+      const selected = document.querySelectorAll('.module-item.active').length;
+      document.getElementById('moduleCount').textContent = `${selected} / ${total} seçili`;
+    }
+
+    function toggleAllModules() {
+      const items = document.querySelectorAll('.module-item');
+      const allActive = [...items].every(i => i.classList.contains('active'));
+      items.forEach(item => {
+        if (allActive) {
+          item.classList.remove('active');
+          item.querySelector('input').checked = false;
+        } else {
+          item.classList.add('active');
+          item.querySelector('input').checked = true;
+        }
+      });
+      updateModuleCount();
+    }
+
+    /* ── Get Selected Modules ── */
     function getSelectedModules() {
-      return [...document.querySelectorAll('.module-toggle.active')]
+      return [...document.querySelectorAll('.module-item.active')]
         .map(el => el.dataset.module)
         .filter(Boolean);
     }
 
-    /* ── Haberleri yükle ── */
+    /* ── Load News from API ── */
     async function loadNews() {
       try {
         const res = await fetch('/api/news');
         if (!res.ok) throw new Error('Hata');
         const data = await res.json();
-        const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23eeebe7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23b8b4b3'%3EGörsel Yok%3C/text%3E%3C/svg%3E";
-        document.getElementById('newsGrid').innerHTML = data.articles.map(a =>
-          `<a class="news-card" href="${escapeHTML(a.link)}" target="_blank" rel="noopener noreferrer">
-            <img src="${escapeHTML(a.image) || fallbackImg}" class="news-img" loading="lazy"
-              onerror="this.src='${fallbackImg}'">
-            <div class="news-body"><div class="news-title">${escapeHTML(a.title)}</div></div>
-          </a>`
-        ).join('');
+        const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23eeeeee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter,sans-serif' font-size='14' fill='%23777777'%3EGörsel Yok%3C/text%3E%3C/svg%3E";
+
+        document.getElementById('newsGrid').innerHTML = data.articles.map(a => `
+          <a href="${escapeHTML(a.link)}" target="_blank" rel="noopener noreferrer"
+             class="group bg-surface-container-lowest rounded-lg overflow-hidden ambient-shadow flex flex-col cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+            <div class="h-56 overflow-hidden relative">
+              <img alt="${escapeHTML(a.title)}"
+                   class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700"
+                   src="${escapeHTML(a.image) || fallbackImg}"
+                   loading="lazy"
+                   onerror="this.src='${fallbackImg}'" />
+            </div>
+            <div class="p-6 flex flex-col flex-1">
+              <h3 class="font-headline text-lg font-bold text-on-surface mb-3 group-hover:text-primary transition-colors line-clamp-2">
+                ${escapeHTML(a.title)}
+              </h3>
+              <div class="mt-auto pt-4 border-t border-surface-container-low flex justify-between items-center">
+                <span class="font-label text-xs font-bold uppercase tracking-widest text-primary">DETAYLI İNCELE</span>
+                <span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+              </div>
+            </div>
+          </a>
+        `).join('');
       } catch (e) {
-        document.getElementById('newsGrid').innerHTML = '<p style="color:var(--ink-3);font-family:var(--mono);font-size:13px">Haberler yüklenemedi.</p>';
+        document.getElementById('newsGrid').innerHTML = `
+          <div class="col-span-full text-center py-12">
+            <span class="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-3 block">cloud_off</span>
+            <p class="font-label text-sm text-on-surface-variant">Haberler yüklenemedi.</p>
+          </div>`;
       }
     }
 
-    /* ── Taramayı başlat ── */
+    /* ── Start Scan ── */
     async function startScan() {
       const url = document.getElementById('targetUrl').value.trim();
       if (!url) return alert('Lütfen URL girin.');
@@ -998,9 +619,14 @@
       const selectedModules = getSelectedModules();
       if (selectedModules.length === 0) return alert('Lütfen en az bir modül seçin.');
 
-      /* UI: tarama moduna geç */
+      scannedUrl = url;
+
+      /* UI: Switch to progress mode */
       document.getElementById('mainContent').style.display = 'none';
-      document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('bentoGrid').style.display = 'none';
+      document.getElementById('trustMetrics')?.closest && (document.getElementById('trustMetrics').style.display = 'none');
+      document.getElementById('progressSection').style.display = 'flex';
+      document.getElementById('resultsSection').style.display = 'none';
       document.getElementById('btnScan').disabled = true;
 
       try {
@@ -1017,16 +643,14 @@
         }
 
         const data = await res.json();
-        const scanId = data.scan_id;
+        currentScanId = data.scan_id;
 
         const pollInterval = setInterval(async () => {
           try {
-            const statusRes = await fetch('/api/status/' + scanId);
+            const statusRes = await fetch('/api/status/' + currentScanId);
             if (!statusRes.ok) return;
             const statusData = await statusRes.json();
 
-            // FİX: "error" durumu yalnızca gerçek hatalarda tetiklenir.
-            // Kuyruk silinmiş ama sonuç hazırsa sunucu artık __DONE__ döndürür (hata değil).
             if (statusData.status === 'error') {
               clearInterval(pollInterval);
               document.getElementById('spinnerSub').textContent = '// Hata: ' + statusData.msg;
@@ -1036,13 +660,11 @@
             for (const msg of (statusData.messages || [])) {
               if (msg === '__DONE__') {
                 clearInterval(pollInterval);
-                // FİX: race condition — scan_results'ın yazılması için kısa bekleme
                 await new Promise(resolve => setTimeout(resolve, 300));
-                const resultRes = await fetch('/api/results/' + scanId);
-                // FİX: 202 = sonuç henüz hazır değil, kısa gecikme sonrası bir kez daha dene
+                const resultRes = await fetch('/api/results/' + currentScanId);
                 if (resultRes.status === 202) {
                   await new Promise(resolve => setTimeout(resolve, 500));
-                  const retryRes = await fetch('/api/results/' + scanId);
+                  const retryRes = await fetch('/api/results/' + currentScanId);
                   if (!retryRes.ok) throw new Error('Sonuç alınamadı.');
                   showResults(await retryRes.json());
                 } else if (!resultRes.ok) {
@@ -1062,57 +684,174 @@
             clearInterval(pollInterval);
             document.getElementById('spinnerText').textContent = 'Tarama Başarısız';
             document.getElementById('spinnerSub').textContent = '// ' + e.message;
-            document.getElementById('progressFill').style.background = 'var(--red)';
+            document.getElementById('progressFill').style.background = '#a51c1c';
           }
         }, 500);
 
       } catch (err) {
         alert('Hata: ' + err.message);
         document.getElementById('btnScan').disabled = false;
-        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('mainContent').style.display = 'flex';
+        document.getElementById('bentoGrid').style.display = 'grid';
         document.getElementById('progressSection').style.display = 'none';
       }
     }
 
-    /* ── Sonuçları göster ── */
+    /* ── Cancel Scan ── */
+    async function cancelCurrentScan() {
+      if (currentScanId) {
+        try { await fetch('/api/cancel/' + currentScanId, { method: 'POST' }); } catch(e) {}
+      }
+      location.reload();
+    }
+
+    /* ── Show Results ── */
     function showResults(result) {
+      lastScanResult = result;
       document.getElementById('progressSection').style.display = 'none';
-      document.getElementById('resultsSection').classList.add('visible');
+      document.getElementById('resultsSection').style.display = 'flex';
+      document.getElementById('bentoGrid').style.display = 'none';
 
       const { findings = [], counts = {}, score = 0 } = result;
 
+      document.getElementById('resultUrlLabel').textContent = scannedUrl;
+
       document.getElementById('summaryGrid').innerHTML = `
-        <div class="stat-card stat-red"><span class="stat-num">${counts.HIGH || 0}</span><span class="stat-lbl">Yüksek</span></div>
-        <div class="stat-card stat-orange"><span class="stat-num">${counts.MEDIUM || 0}</span><span class="stat-lbl">Orta</span></div>
-        <div class="stat-card stat-blue"><span class="stat-num">${counts.LOW || 0}</span><span class="stat-lbl">Düşük</span></div>
-        <div class="stat-card stat-green"><span class="stat-num">${score}</span><span class="stat-lbl">Skor</span></div>`;
+        <div class="bg-surface-container-lowest rounded-lg p-6 ambient-shadow text-center fade-in-up" style="animation-delay:0s">
+          <span class="font-headline text-3xl font-bold tracking-tighter text-sev-high">${counts.HIGH || 0}</span>
+          <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-2">YÜKSEK</p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-lg p-6 ambient-shadow text-center fade-in-up" style="animation-delay:0.05s">
+          <span class="font-headline text-3xl font-bold tracking-tighter text-sev-medium">${counts.MEDIUM || 0}</span>
+          <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-2">ORTA</p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-lg p-6 ambient-shadow text-center fade-in-up" style="animation-delay:0.1s">
+          <span class="font-headline text-3xl font-bold tracking-tighter text-sev-low">${counts.LOW || 0}</span>
+          <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-2">DÜŞÜK</p>
+        </div>
+        <div class="bg-primary rounded-lg p-6 shadow-lg text-center fade-in-up" style="animation-delay:0.15s">
+          <span class="font-headline text-3xl font-bold tracking-tighter text-on-primary">${score}</span>
+          <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-primary/70 mt-2">SKOR</p>
+        </div>`;
 
       const list = document.getElementById('findingsList');
       if (findings.length === 0) {
-        list.innerHTML = '<p style="text-align:center;color:var(--green);padding:24px;font-family:var(--mono)">✓ Açık bulunamadı.</p>';
+        list.innerHTML = `
+          <div class="bg-surface-container-lowest rounded-lg p-8 ambient-shadow text-center fade-in-up">
+            <span class="material-symbols-outlined text-4xl text-sev-pass mb-3 block" style="font-variation-settings: 'FILL' 1;">verified</span>
+            <p class="font-headline text-lg font-bold text-sev-pass">Açık bulunamadı</p>
+            <p class="font-body text-sm text-on-surface-variant mt-1">Tüm testler başarıyla geçildi.</p>
+          </div>`;
         return;
       }
 
-      list.innerHTML = findings.map(f => `
-        <div class="finding-card">
-          <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="severity-pip sev-${(f.severity || 'low').toLowerCase()}"></div>
-            <div class="finding-title">${escapeHTML(f.title)}</div>
-            <span class="severity-tag tag-${(f.severity || 'low').toLowerCase()}">${escapeHTML(f.severity)}</span>
-          </div>
-          <div class="finding-body">
-            <div class="finding-detail">${escapeHTML(f.detail)}</div>
-            <div class="remediation"><p>${escapeHTML(f.fix)}</p></div>
-          </div>
-        </div>`).join('');
+      const sevOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      const sorted = [...findings].sort((a, b) => (sevOrder[a.severity] ?? 3) - (sevOrder[b.severity] ?? 3));
+
+      list.innerHTML = sorted.map((f, i) => {
+        const sev = (f.severity || 'low').toLowerCase();
+        const sevColors = {
+          high: 'bg-sev-high-bg text-sev-high border-sev-high/20',
+          medium: 'bg-sev-medium-bg text-sev-medium border-sev-medium/20',
+          low: 'bg-sev-low-bg text-sev-low border-sev-low/20',
+        };
+        const dotColors = { high: 'bg-sev-high', medium: 'bg-sev-medium', low: 'bg-sev-low' };
+        return `
+          <div class="finding-card bg-surface-container-lowest rounded-lg ambient-shadow overflow-hidden fade-in-up" style="animation-delay:${0.05 * i}s">
+            <div class="finding-header flex items-center gap-4 p-5 cursor-pointer select-none hover:bg-surface-container-low transition-colors"
+                 onclick="this.parentElement.classList.toggle('open')">
+              <div class="w-2 h-2 rounded-full flex-shrink-0 ${dotColors[sev] || 'bg-outline'}"></div>
+              <span class="font-body text-sm font-semibold flex-1">${escapeHTML(f.title)}</span>
+              <span class="font-label text-[0.6875rem] font-bold uppercase tracking-wider px-3 py-1 rounded-sm border ${sevColors[sev] || ''}">${escapeHTML(f.severity)}</span>
+              <span class="material-symbols-outlined text-on-surface-variant finding-chevron">expand_more</span>
+            </div>
+            <div class="finding-body border-t border-surface-container-low">
+              <div class="p-5">
+                <div class="bg-surface rounded-lg p-4 mb-4">
+                  <p class="font-label text-xs uppercase tracking-widest text-on-surface-variant mb-2">DETAY</p>
+                  <p class="font-body text-sm text-on-surface leading-relaxed">${escapeHTML(f.detail)}</p>
+                </div>
+                <div>
+                  <p class="font-label text-xs uppercase tracking-widest text-on-surface-variant mb-2">ÇÖZÜM ÖNERİSİ</p>
+                  <p class="font-body text-sm text-on-surface-variant leading-relaxed">${escapeHTML(f.fix)}</p>
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
     }
+
+    /* ── PDF Export ── */
+    function exportPDF() {
+      if (!lastScanResult) return;
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const { findings = [], counts = {}, score = 0 } = lastScanResult;
+
+        doc.setFontSize(20);
+        doc.text('MergenScan — Tarama Raporu', 14, 22);
+        doc.setFontSize(11);
+        doc.text('URL: ' + scannedUrl, 14, 32);
+        doc.text('Tarih: ' + new Date().toLocaleString('tr-TR'), 14, 38);
+        doc.text(`Skor: ${score} | Yüksek: ${counts.HIGH || 0} | Orta: ${counts.MEDIUM || 0} | Düşük: ${counts.LOW || 0}`, 14, 46);
+
+        if (findings.length > 0) {
+          doc.autoTable({
+            startY: 54,
+            head: [['Seviye', 'Başlık', 'Detay', 'Çözüm']],
+            body: findings.map(f => [f.severity, f.title, f.detail, f.fix]),
+            styles: { fontSize: 8, cellPadding: 3 },
+            headStyles: { fillColor: [0, 0, 0] },
+            columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 35 } }
+          });
+        } else {
+          doc.text('Açık bulunamadı. Tüm testler başarıyla geçildi.', 14, 54);
+        }
+
+        doc.save('MergenScan_Rapor_' + Date.now() + '.pdf');
+      } catch (e) {
+        console.error('PDF oluşturulamadı:', e);
+        alert('PDF oluşturulurken bir hata oluştu.');
+      }
+    }
+
+    /* ───
+       INTERACTIVE THREAT MAP - Counters simulation
+       ─── */
+       
+    // Restoring live counters for the dashboard
+    (function initCounters() {
+      let threatCount = 12584;
+      let blockedCount = 1061;
+      let activeNodesCount = 14;
+
+      const threatEl = document.getElementById('threatCounter');
+      const blockedEl = document.getElementById('blockedCount');
+      const activeNodesEl = document.getElementById('activeNodesCount');
+
+      if (threatEl) threatEl.innerText = threatCount.toLocaleString('tr-TR');
+      if (blockedEl) blockedEl.innerText = blockedCount.toLocaleString('tr-TR');
+      if (activeNodesEl) activeNodesEl.innerText = activeNodesCount.toString();
+
+      setInterval(() => {
+        threatCount += Math.floor(Math.random() * 5);
+        if (threatEl) threatEl.innerText = threatCount.toLocaleString('tr-TR');
+
+        if(Math.random() > 0.4) {
+            blockedCount += Math.floor(Math.random() * 3);
+            if (blockedEl) blockedEl.innerText = blockedCount.toLocaleString('tr-TR');
+        }
+
+        if(Math.random() > 0.8) {
+            activeNodesCount += (Math.random() > 0.5 ? 1 : -1);
+            if(activeNodesCount < 10) activeNodesCount = 10;
+            if(activeNodesCount > 30) activeNodesCount = 30;
+            if (activeNodesEl) activeNodesEl.innerText = activeNodesCount.toString();
+        }
+      }, 2000);
+    })();
   </script>
-  <footer
-    style="border-top:1px solid var(--paper-3);margin-top:60px;padding:24px 28px;max-width:1040px;margin-left:auto;margin-right:auto;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12px;color:var(--ink-4)">
-    <span>© 2025 MergenScan — Tüm hakları saklıdır.</span>
-    <span style="display:flex;align-items:center;gap:6px"><span style="color:var(--green);font-size:8px">●</span>
-      Aktif</span>
-  </footer>
 </body>
 
 </html>
