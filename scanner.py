@@ -3,9 +3,12 @@ import time
 import html as html_module
 import socket
 import ipaddress
+import ssl
+import datetime
+import re as _re
 import requests
 import urllib3
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -56,7 +59,21 @@ class WebShieldScanner:
     def crawl_site(self, url, limit=50):
         self._check_cancel()
         self._log(f"[i] Crawl başlatılıyor → {url}")
-        time.sleep(1)
+        r = self._safe_get(url)
+        if not r:
+            return
+        links = set()
+        for m in _re.finditer(r'href=["\']([^"\'\ >]+)', r.text):
+            href = m.group(1)
+            full = urljoin(url, href)
+            parsed = urlparse(full)
+            base   = urlparse(url)
+            if parsed.netloc == base.netloc and parsed.scheme in ('http','https'):
+                links.add(full)
+        self._log(f"[i] {len(links)} dahili bağlantı keşfedildi.")
+        for link in list(links)[:limit]:
+            self._log(f"  → {link}")
+        time.sleep(0.5)
 
     def test_sqli(self, url):
         self._check_cancel()
@@ -224,7 +241,52 @@ class WebShieldScanner:
 
     def test_ssl(self, url):
         self._check_cancel()
-        self._log("[i] SSL kontrol ediliyor (Simülasyon)...")
+        self._log("[i] SSL/TLS sertifikası kontrol ediliyor...")
+        parsed = urlparse(url)
+        host = parsed.hostname
+        port = parsed.port or 443
+        if parsed.scheme != "https":
+            self.add_finding("HTTPS Kullanılmıyor", "HIGH",
+                "Site HTTPS yerine HTTP kullanıyor.",
+                "SSL/TLS sertifikası edinin ve HTTPS'e geçin.")
+            self._log("[✗] Site HTTPS kullanmıyor!")
+            time.sleep(0.5)
+            return
+        try:
+            ctx = ssl.create_default_context()
+            with socket.create_connection((host, port), timeout=8) as sock:
+                with ctx.wrap_socket(sock, server_hostname=host) as ssock:
+                    cert = ssock.getpeercert()
+                    na = cert.get('notAfter', '')
+                    exp = datetime.datetime.strptime(na, '%b %d %H:%M:%S %Y %Z')
+                    days = (exp - datetime.datetime.utcnow()).days
+                    if days < 0:
+                        self.add_finding("SSL Sertifikası Süresi Dolmuş", "HIGH",
+                            f"Sertifika {abs(days)} gün önce doldu.",
+                            "SSL sertifikanızı acilen yenileyin.")
+                        self._log("[✗] SSL sertifikası süresi dolmuş!")
+                    elif days < 30:
+                        self.add_finding("SSL Sertifikası Yakında Dolacak", "MEDIUM",
+                            f"Sertifika {days} gün içinde dolacak.",
+                            "SSL sertifikanızı yenileyin.")
+                        self._log(f"[!] SSL sertifikası {days} gün içinde dolacak.")
+                    else:
+                        self._log(f"[✓] SSL sertifikası geçerli ({days} gün kaldı).")
+                    proto = ssock.version()
+                    if proto and proto in ('TLSv1', 'TLSv1.1', 'SSLv2', 'SSLv3'):
+                        self.add_finding(f"Eski TLS Protokolü: {proto}", "MEDIUM",
+                            f"Sunucu güvensiz protokol kullanıyor: {proto}.",
+                            "TLS 1.2 veya TLS 1.3'e yükseltin.")
+                        self._log(f"[!] Eski TLS protokolü: {proto}")
+                    else:
+                        self._log(f"[✓] TLS protokolü güvenli: {proto}")
+        except ssl.SSLCertVerificationError as e:
+            self.add_finding("SSL Sertifika Doğrulama Hatası", "HIGH",
+                f"Sertifika doğrulanamadı: {str(e)[:200]}",
+                "Güvenilir bir CA'dan geçerli SSL sertifikası edinin.")
+            self._log("[✗] SSL sertifikası doğrulanamadı!")
+        except Exception as e:
+            self._log(f"[!] SSL kontrolü sırasında hata: {e}")
         time.sleep(0.5)
 
     def test_cors(self, url):
@@ -245,39 +307,254 @@ class WebShieldScanner:
     def test_cookies(self, url):
         self._check_cancel()
         self._log("[i] Cookie bayrakları kontrol ediliyor...")
+        r = self._safe_get(url)
+        if not r:
+            return
+        cookie_hdrs = [v for k, v in r.raw.headers.items() if k.lower() == 'set-cookie'] if r.raw else []
+        if not cookie_hdrs:
+            self._log("[✓] Yanıtta Set-Cookie başlığı yok.")
+            time.sleep(0.5)
+            return
+        found_issue = False
+        for cs in cookie_hdrs:
+            name = cs.split('=')[0].strip()
+            low = cs.lower()
+            missing = []
+            if 'secure' not in low:
+                missing.append('Secure')
+            if 'httponly' not in low:
+                missing.append('HttpOnly')
+            if 'samesite' not in low:
+                missing.append('SameSite')
+            if missing:
+                self.add_finding(f"Güvensiz Cookie: {name}", "MEDIUM",
+                    f"Cookie '{name}' eksik bayraklar: {', '.join(missing)}.",
+                    "Tüm cookie'lere Secure, HttpOnly ve SameSite=Strict ekleyin.")
+                self._log(f"[!] Cookie '{name}': eksik → {', '.join(missing)}")
+                found_issue = True
+        if not found_issue:
+            self._log("[✓] Cookie bayrakları uygun.")
         time.sleep(0.5)
 
     def test_http_methods(self, url):
         self._check_cancel()
         self._log("[i] HTTP metodları test ediliyor...")
+        host = urlparse(url).hostname or ""
+        if not _is_ip_safe(host):
+            return
+        dangerous_found = []
+        try:
+            r = self.session.options(url, timeout=8)
+            allow = r.headers.get('Allow', '').upper()
+            for m in ['PUT', 'DELETE', 'TRACE']:
+                if m in allow:
+                    dangerous_found.append(m)
+        except Exception:
+            pass
+        if 'TRACE' not in dangerous_found:
+            try:
+                r = self.session.request('TRACE', url, timeout=8)
+                if r.status_code == 200 and 'trace' in r.text.lower():
+                    dangerous_found.append('TRACE')
+            except Exception:
+                pass
+        if dangerous_found:
+            self.add_finding("Tehlikeli HTTP Metodları Açık", "MEDIUM",
+                f"Aktif tehlikeli metodlar: {', '.join(dangerous_found)}.",
+                "Gereksiz HTTP metodlarını sunucu konfigürasyonunda devre dışı bırakın.")
+            self._log(f"[!] Tehlikeli metodlar: {', '.join(dangerous_found)}")
+        else:
+            self._log("[✓] Tehlikeli HTTP metodları kapalı.")
         time.sleep(0.5)
 
     def test_clickjacking(self, url):
         self._check_cancel()
         self._log("[i] Clickjacking kontrolü...")
+        r = self._safe_get(url)
+        if not r:
+            return
+        xfo = r.headers.get('X-Frame-Options', '').upper()
+        csp = r.headers.get('Content-Security-Policy', '')
+        has_xfo = xfo in ('DENY', 'SAMEORIGIN')
+        has_frame_anc = 'frame-ancestors' in csp.lower()
+        if not has_xfo and not has_frame_anc:
+            self.add_finding("Clickjacking Koruması Eksik", "MEDIUM",
+                "X-Frame-Options veya CSP frame-ancestors başlığı bulunamadı.",
+                "X-Frame-Options: DENY veya CSP frame-ancestors: 'self' ekleyin.")
+            self._log("[!] Clickjacking koruması eksik.")
+        else:
+            self._log("[✓] Clickjacking koruması mevcut.")
         time.sleep(0.5)
 
     def test_rate_limiting(self, url):
         self._check_cancel()
         self._log("[i] Rate Limiting test ediliyor...")
+        host = urlparse(url).hostname or ""
+        if not _is_ip_safe(host):
+            return
+        blocked = False
+        try:
+            for i in range(15):
+                self._check_cancel()
+                r = self.session.get(url, timeout=5)
+                if r.status_code == 429:
+                    blocked = True
+                    break
+        except Exception:
+            pass
+        if not blocked:
+            self.add_finding("Rate Limiting Eksik", "LOW",
+                "15 ardışık istekte sunucu rate limit uygulamadı.",
+                "Brute-force ve DDoS koruması için rate limiting uygulayın.")
+            self._log("[!] Rate limiting tespit edilemedi.")
+        else:
+            self._log("[✓] Rate limiting aktif (429 yanıtı alındı).")
         time.sleep(0.5)
 
     def test_tech_detect(self, url):
         self._check_cancel()
         self._log("[i] Teknoloji tespiti yapılıyor...")
+        r = self._safe_get(url)
+        if not r:
+            return
+        techs = []
+        server = r.headers.get('Server', '')
+        if server:
+            techs.append(f"Server: {server}")
+            if any(c.isdigit() for c in server):
+                self.add_finding("Sunucu Versiyon Sızıntısı", "LOW",
+                    f"Server başlığı versiyon bilgisi içeriyor: {server}.",
+                    "Server başlığından versiyon bilgisini kaldırın.")
+        powered = r.headers.get('X-Powered-By', '')
+        if powered:
+            techs.append(f"X-Powered-By: {powered}")
+            self.add_finding("Teknoloji Bilgisi Sızıntısı", "LOW",
+                f"X-Powered-By başlığı teknoloji bilgisi sızdırıyor: {powered}.",
+                "X-Powered-By başlığını kaldırın.")
+        aspnet = r.headers.get('X-AspNet-Version', '')
+        if aspnet:
+            techs.append(f"ASP.NET: {aspnet}")
+            self.add_finding("ASP.NET Versiyon Sızıntısı", "LOW",
+                f"X-AspNet-Version başlığı versiyon sızdırıyor: {aspnet}.",
+                "X-AspNet-Version başlığını kaldırın.")
+        body = r.text.lower()
+        if 'wp-content' in body or 'wp-includes' in body:
+            techs.append("CMS: WordPress")
+        elif 'joomla' in body:
+            techs.append("CMS: Joomla")
+        elif 'drupal' in body:
+            techs.append("CMS: Drupal")
+        if techs:
+            self._log(f"[i] Tespit edilen teknolojiler: {', '.join(techs)}")
+        else:
+            self._log("[✓] Belirgin teknoloji bilgisi sızıntısı yok.")
         time.sleep(0.5)
 
     def test_robots_sitemap(self, url):
         self._check_cancel()
-        self._log("[i] robots.txt inceleniyor...")
+        self._log("[i] robots.txt ve sitemap inceleniyor...")
+        parsed = urlparse(url)
+        base = f"{parsed.scheme}://{parsed.netloc}"
+        r = self._safe_get(f"{base}/robots.txt")
+        if r and r.status_code == 200 and len(r.text) > 5:
+            self._log("[i] robots.txt bulundu, analiz ediliyor...")
+            sensitive = ['/admin','/api','/backup','/config','/database',
+                         '/debug','/env','/internal','/private','/secret','/staging','/test']
+            exposed = []
+            for line in r.text.splitlines():
+                line = line.strip().lower()
+                if line.startswith('disallow:'):
+                    path = line.split(':', 1)[1].strip()
+                    for pat in sensitive:
+                        if pat in path:
+                            exposed.append(path)
+                            break
+            if exposed:
+                self.add_finding("robots.txt Hassas Yol İfşası", "LOW",
+                    f"robots.txt'de hassas yollar listeleniyor: {', '.join(exposed[:5])}",
+                    "Hassas dizinleri robots.txt'de listelemek yerine erişim kontrolü uygulayın.")
+                self._log(f"[!] robots.txt'de hassas yollar: {', '.join(exposed[:5])}")
+            else:
+                self._log("[✓] robots.txt'de hassas yol ifşası yok.")
+        else:
+            self._log("[i] robots.txt bulunamadı veya boş.")
+        r2 = self._safe_get(f"{base}/sitemap.xml")
+        if r2 and r2.status_code == 200 and 'xml' in r2.headers.get('Content-Type', '').lower():
+            self._log("[✓] sitemap.xml mevcut.")
+        else:
+            self._log("[i] sitemap.xml bulunamadı.")
         time.sleep(0.5)
 
     def test_waf(self, url):
         self._check_cancel()
         self._log("[i] WAF tespiti yapılıyor...")
+        waf_payload = "<script>alert(1)</script>../../etc/passwd' OR 1=1--"
+        r_normal = self._safe_get(url)
+        r_mal = self._safe_get(url, params={"test": waf_payload})
+        waf_detected = False
+        waf_name = "Bilinmeyen"
+        if r_mal:
+            if r_mal.status_code in (403, 406, 419, 429, 503):
+                waf_detected = True
+            hdrs = str(r_mal.headers).lower()
+            body = r_mal.text.lower()
+            if 'cf-ray' in hdrs or 'cloudflare' in body:
+                waf_detected, waf_name = True, "Cloudflare"
+            elif 'x-sucuri' in hdrs or 'sucuri' in body:
+                waf_detected, waf_name = True, "Sucuri"
+            elif 'mod_security' in body or 'modsecurity' in body:
+                waf_detected, waf_name = True, "ModSecurity"
+            elif 'awselb' in hdrs or 'x-amzn' in hdrs:
+                waf_detected, waf_name = True, "AWS WAF"
+            elif 'akamai' in hdrs:
+                waf_detected, waf_name = True, "Akamai"
+        elif r_normal:
+            waf_detected = True
+        if waf_detected:
+            self._log(f"[✓] WAF tespit edildi: {waf_name}")
+        else:
+            self.add_finding("WAF Tespit Edilemedi", "LOW",
+                "Web Application Firewall (WAF) koruması tespit edilemedi.",
+                "WAF (Cloudflare, AWS WAF, ModSecurity vb.) kullanmayı değerlendirin.")
+            self._log("[!] WAF koruması tespit edilemedi.")
         time.sleep(0.5)
 
     def test_subdomain_port(self, url):
         self._check_cancel()
-        self._log("[i] Port taraması yapılıyor (Simülasyon)...")
+        self._log("[i] Yaygın port taraması yapılıyor...")
+        host = urlparse(url).hostname
+        if not _is_ip_safe(host):
+            self._log("[!] Güvensiz IP, port taraması atlandı.")
+            return
+        common_ports = {
+            21:'FTP', 22:'SSH', 23:'Telnet', 25:'SMTP', 53:'DNS',
+            80:'HTTP', 110:'POP3', 143:'IMAP', 443:'HTTPS', 445:'SMB',
+            993:'IMAPS', 995:'POP3S', 3306:'MySQL', 3389:'RDP',
+            5432:'PostgreSQL', 6379:'Redis', 8080:'HTTP-Alt', 8443:'HTTPS-Alt',
+            27017:'MongoDB'
+        }
+        open_ports = []
+        for port, svc in common_ports.items():
+            self._check_cancel()
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(1.5)
+                result = s.connect_ex((host, port))
+                s.close()
+                if result == 0:
+                    open_ports.append(f"{port}/{svc}")
+                    self._log(f"  → Port {port} ({svc}) açık")
+            except Exception:
+                pass
+        if open_ports:
+            risky = [p for p in open_ports if any(x in p for x in ['Telnet','FTP','Redis','MongoDB','MySQL','PostgreSQL','SMB','RDP'])]
+            if risky:
+                self.add_finding("Riskli Açık Portlar", "MEDIUM",
+                    f"Potansiyel riskli portlar açık: {', '.join(risky)}.",
+                    "Gereksiz portları güvenlik duvarı ile kapatın.")
+                self._log(f"[!] Riskli portlar: {', '.join(risky)}")
+            else:
+                self._log(f"[✓] Açık portlar: {', '.join(open_ports)} (standart)")
+        else:
+            self._log("[✓] Yaygın portlarda açık port bulunamadı.")
         time.sleep(0.5)
