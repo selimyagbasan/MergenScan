@@ -54,7 +54,7 @@ class WebShieldScanner:
             return self.session.get(url, timeout=timeout, **kwargs)
         except Exception as e:
             self._log(f"[!] İstek hatası ({url}): {e}")
-            return None
+            raise RuntimeError(f"İstek tamamlanamadı: {url}") from e
 
     def crawl_site(self, url, limit=50):
         self._check_cancel()
@@ -85,7 +85,7 @@ class WebShieldScanner:
         if r:
             for payload in payloads:
                 test_r = self._safe_get(url, params={"id": payload})
-                if test_r is not None and any(err in test_r.text.lower() for err in sql_errors):
+                if test_r is not None and any(err in test_r.text.lower() for err in sql_errors) and not any(err in r.text.lower() for err in sql_errors):
                     self.add_finding(
                         "SQL Injection", "HIGH",
                         "'id' parametresi SQL hatasına yol açtı.",
@@ -103,7 +103,6 @@ class WebShieldScanner:
         for payload in payloads:
             r = self._safe_get(url, params={"q": payload})
             if r:
-                # Encoded HTML is inert text, not an executable reflection.
                 if payload in r.text:
                     self.add_finding(
                         "Cross-Site Scripting (XSS)", "HIGH",
@@ -240,7 +239,8 @@ class WebShieldScanner:
         self._check_cancel()
         self._log("[i] Open Redirect denemeleri yapılıyor...")
         r = self._safe_get(url, params={"next": "https://evil.com"}, allow_redirects=False)
-        if r and r.status_code in (301, 302, 303, 307, 308) and urlparse(urljoin(url, r.headers.get("Location", ""))).hostname == "evil.com":
+        destination = urlparse(urljoin(url, r.headers.get("Location", ""))) if r is not None else None
+        if r is not None and r.status_code in (301, 302, 303, 307, 308) and destination.hostname == "evil.com":
             self.add_finding(
                 "Open Redirect", "MEDIUM",
                 "Dış URL'ye yönlendirme yapıldı.",

@@ -498,11 +498,11 @@
       { id: 'ssl',       name: 'SSL/TLS',           icon: 'https' },
       { id: 'waf',       name: 'WAF Tespiti',       icon: 'security' },
       { id: 'cookies',   name: 'Cookie Bayrakları', icon: 'cookie' },
-      { id: 'methods',   name: 'HTTP Metodları',   icon: 'http' },
-      { id: 'clickjack', name: 'Clickjacking',    icon: 'ads_click' },
-      { id: 'ratelimit', name: 'Rate Limiting',   icon: 'speed' },
+      { id: 'methods',   name: 'HTTP Metodları', icon: 'http' },
+      { id: 'clickjack', name: 'Clickjacking', icon: 'web' },
+      { id: 'ratelimit', name: 'Rate Limiting', icon: 'speed' },
       { id: 'tech',      name: 'Teknoloji Tespiti', icon: 'memory' },
-      { id: 'ports',     name: 'Port Taraması',   icon: 'router' },
+      { id: 'ports',     name: 'Port Taraması', icon: 'lan' },
       { id: 'robots',    name: 'Robots/Sitemap',    icon: 'smart_toy' },
     ];
 
@@ -664,7 +664,7 @@
                 if (resultRes.status === 202) {
                   await new Promise(resolve => setTimeout(resolve, 500));
                   const retryRes = await fetch('/api/results/' + currentScanId);
-                  if (!retryRes.ok) throw new Error('Sonuç alınamadı.');
+                  if (retryRes.status === 202 || !retryRes.ok) throw new Error('Sonuç alınamadı.');
                   showResults(await retryRes.json());
                 } else if (!resultRes.ok) {
                   throw new Error('Sonuç alınamadı.');
@@ -706,16 +706,16 @@
 
     /* ── Show Results ── */
     function showResults(result) {
-      if (result.status && result.status !== 'completed') {
-        document.getElementById('btnScan').disabled = false;
-        throw new Error(result.error || 'Tarama tamamlanmadı; güvenlik puanı hesaplanmadı.');
-      }
+      document.getElementById('btnScan').disabled = false;
       lastScanResult = result;
       document.getElementById('progressSection').style.display = 'none';
       document.getElementById('resultsSection').style.display = 'flex';
       document.getElementById('bentoGrid').style.display = 'none';
 
-      const { findings = [], counts = {}, score = 0 } = result;
+      const { findings = [], counts = {}, score = null } = result;
+      const complete = result.status === 'completed';
+      const statusLabels = {error: 'Tarama başarısız', cancelled: 'Tarama iptal edildi', timeout: 'Tarama zaman aşımına uğradı'};
+      const statusLabel = statusLabels[result.status] || 'Tarama tamamlanmadı';
 
       document.getElementById('resultUrlLabel').textContent = scannedUrl;
 
@@ -733,17 +733,22 @@
           <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant mt-2">DÜŞÜK</p>
         </div>
         <div class="bg-primary rounded-lg p-6 shadow-lg text-center fade-in-up" style="animation-delay:0.15s">
-          <span class="font-headline text-3xl font-bold tracking-tighter text-on-primary">${score}</span>
+          <span class="font-headline text-3xl font-bold tracking-tighter text-on-primary">${complete && score !== null ? score : '—'}</span>
           <p class="font-label text-[0.6875rem] uppercase tracking-widest text-on-primary/70 mt-2">SKOR</p>
         </div>`;
 
       const list = document.getElementById('findingsList');
+      const incompleteNotice = complete ? '' : `<div class="p-5 text-sev-high font-bold">${escapeHTML(statusLabel)}. Güvenlik skoru hesaplanmadı; bulgular eksik olabilir.</div>`;
+      if (!complete && findings.length === 0) {
+        list.innerHTML = incompleteNotice;
+        return;
+      }
       if (findings.length === 0) {
         list.innerHTML = `
           <div class="bg-surface-container-lowest rounded-lg p-8 ambient-shadow text-center fade-in-up">
             <span class="material-symbols-outlined text-4xl text-sev-pass mb-3 block" style="font-variation-settings: 'FILL' 1;">verified</span>
             <p class="font-headline text-lg font-bold text-sev-pass">Açık bulunamadı</p>
-            <p class="font-body text-sm text-on-surface-variant mt-1">Tüm testler başarıyla geçildi.</p>
+            <p class="font-body text-sm text-on-surface-variant mt-1">Seçilen kontrollerde bulgu tespit edilmedi; bu sonuç güvenlik garantisi değildir.</p>
           </div>`;
         return;
       }
@@ -751,7 +756,7 @@
       const sevOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
       const sorted = [...findings].sort((a, b) => (sevOrder[a.severity] ?? 3) - (sevOrder[b.severity] ?? 3));
 
-      list.innerHTML = sorted.map((f, i) => {
+      list.innerHTML = incompleteNotice + sorted.map((f, i) => {
         const sev = (f.severity || 'low').toLowerCase();
         const sevColors = {
           high: 'bg-sev-high-bg text-sev-high border-sev-high/20',

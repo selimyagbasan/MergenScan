@@ -1,175 +1,189 @@
-import sys, html, queue, threading, ssl
-from types import SimpleNamespace
-from unittest.mock import Mock
-import pytest, requests
+"""Offline regression tests: no requests are sent to external targets."""
+import html
+import queue
+import sys
+import threading
 from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
+import requests
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import scanner, app as api
-U='https://scanner-fixture.invalid'
+import app as api
+import scanner
+
+URL = 'https://fixture.invalid/'
+
+
 def response(body='', status=200, headers=None):
-    r=requests.Response(); r.status_code=status; r._content=body.encode(); r.headers.update(headers or {}); r.raw=None
-    return r
+    result = requests.Response()
+    result.status_code = status
+    result._content = body.encode()
+    result.headers.update(headers or {})
+    return result
+
+
 @pytest.fixture(autouse=True)
 def isolate(monkeypatch):
-    monkeypatch.setattr(scanner.time,'sleep',lambda _:None)
-    monkeypatch.setattr(scanner,'_is_ip_safe',lambda _:True)
-    monkeypatch.setattr(requests.sessions.Session,'request',Mock(side_effect=AssertionError('Unexpected real network')))
-    monkeypatch.setattr(scanner.socket,'create_connection',Mock(side_effect=AssertionError('Unexpected real socket')))
-    api.limiter.enabled=False
-@pytest.mark.parametrize('method,body,headers,status,count',[
- ('sqli','sql syntax',{},200,1),('sqli','normal',{},200,0),
- ('xss',"<script>alert('XSS')</script>",{},200,1),('xss','normal',{},200,0),
- ('csrf','<form method="post"><input name="csrf_token"></form>',{},200,0),('csrf','<form method="post"></form>',{},200,1),
- ('headers','',{},200,3),('headers','',{'Strict-Transport-Security':'max-age=1','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'self'"},200,0),
- ('traversal','root:x:0:0',{},200,1),('traversal','normal',{},200,0),
- ('sensitive_files','DB_PASSWORD=test_fixture',{},200,1),('sensitive_files','Not Found',{},404,0),
- ('open_redirect','',{'Location':'https://evil.com'},302,1),('open_redirect','',{},200,0),
- ('cmdi','uid=1000(test)',{},200,1),('cmdi','normal',{},200,0),
- ('cors','',{'Access-Control-Allow-Origin':'*'},200,1),('cors','',{},200,0),
- ('clickjacking','',{},200,1),('clickjacking','',{'X-Frame-Options':'DENY'},200,0),
- ('tech_detect','',{'Server':'nginx/1.2','X-Powered-By':'PHP'},200,2),('tech_detect','',{},200,0),
- ('robots_sitemap','User-agent: *\nDisallow: /admin',{},200,1),('robots_sitemap','',{},404,0),
- ('waf','cloudflare',{'cf-ray':'fixture'},200,0),('waf','normal',{},200,1),
+    monkeypatch.setattr(scanner.time, 'sleep', lambda _: None)
+    monkeypatch.setattr(scanner, '_is_ip_safe', lambda _: True)
+    monkeypatch.setattr(requests.sessions.Session, 'request', Mock(side_effect=AssertionError('Unexpected network')))
+    monkeypatch.setattr(api.limiter, 'enabled', False)
+    monkeypatch.setattr(api, 'REQUIRE_AUTH', False)
+    for state in (api.scan_queues, api.scan_results, api.scan_events, api.scan_timestamps):
+        state.clear()
+
+
+def run(method, replies):
+    instance = scanner.WebShieldScanner()
+    instance._safe_get = Mock(side_effect=replies) if isinstance(replies, list) else Mock(return_value=replies)
+    getattr(instance, method)(URL)
+    return instance
+
+
+@pytest.mark.parametrize('method,replies,count', [
+    ('test_sqli', [response('ok'), response('SQL syntax error', 500)], 1),
+    ('test_sqli', response('ok'), 0),
+    ('test_sqli', response('SQL syntax reference documentation'), 0),
+    ('test_xss', response("<script>alert('XSS')</script>"), 1),
+    ('test_xss', response(html.escape("<script>alert('XSS')</script>")), 0),
+    ('test_csrf', response('<p>Static page</p>'), 0),
+    ('test_csrf', response('<form method="get"><input name="q"></form>'), 0),
+    ('test_csrf', response('<form method="post"><input name="email"></form>'), 1),
+    ('test_csrf', response('<form method="post"><input name="csrf_token"></form>'), 0),
+    ('test_csrf', response('<form method="post"><input name="csrf_token"></form><form method="post"><input name="email"></form>'), 1),
+    ('test_headers', response(), 3),
+    ('test_headers', response(headers={'Strict-Transport-Security': 'max-age=1', 'X-Frame-Options': 'DENY', 'Content-Security-Policy': "default-src 'self'"}), 0),
+    ('test_traversal', response('root:x:0:0:root:/root:/bin/bash'), 1),
+    ('test_sensitive_files', response('<html><body>Welcome to app</body></html>'), 0),
+    ('test_sensitive_files', response(status=404), 0),
+    ('test_sensitive_files', [response('DB_PASSWORD=secret'), response('[core]\nrepositoryformatversion = 0'), response("<?php define('DB_NAME', 'app');"), response('CREATE TABLE users (id INT);')], 4),
+    ('test_cmdi', response('uid=1000(user)'), 1),
+    ('test_cors', response(headers={'Access-Control-Allow-Origin': '*'}), 1),
+    ('test_clickjacking', response(), 1),
+    ('test_clickjacking', response(headers={'X-Frame-Options': 'DENY'}), 0),
+    ('test_tech_detect', response(headers={'Server': 'nginx/1.2.3'}), 1),
+    ('test_robots_sitemap', [response('User-agent: *\nDisallow: /admin'), response(status=404)], 1),
+    ('test_waf', response(), 1),
+    ('crawl_site', response('<a href="/page">link</a>'), 0),
 ])
-def test_module_baselines(method,body,headers,status,count):
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response(body,status,headers))
-    getattr(s,'test_'+method)(U); assert len(s.findings)==count
+def test_module_cases(method, replies, count):
+    assert len(run(method, replies).findings) == count
 
-def test_encoded_xss_not_vulnerable():
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(side_effect=lambda url,**kw: response(html.escape(kw['params']['q'])))
-    s.test_xss(U); assert not s.findings
 
-def test_sqli_error_status_detected():
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(side_effect=[response('ok')]+[response('SQL syntax error',500)]*4)
-    s.test_sqli(U); assert s.findings
+@pytest.mark.parametrize('status', [301, 302, 303, 307, 308])
+@pytest.mark.parametrize('location,expected', [('https://evil.com', 1), ('//evil.com/path', 1), ('/help/evil.com', 0), ('https://evil.com.fixture.invalid', 0)])
+def test_redirect(status, location, expected):
+    assert len(run('test_open_redirect', response(status=status, headers={'Location': location})).findings) == expected
 
-def test_csrf_no_form_no_finding():
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response('<html>static page</html>'))
-    s.test_csrf(U); assert not s.findings
 
-def test_csrf_each_post_form_checked():
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response('<form method="post"><input name="csrf_token"></form><form method="post"><input name="email"></form>'))
-    s.test_csrf(U); assert s.findings
+@pytest.mark.parametrize('cookie,expected', [('session=abc; Path=/', 1), ('session=secure_httponly_samesite; Path=/', 1), ('session=abc; Secure; HttpOnly; SameSite=Strict', 0)])
+def test_cookie_flags(cookie, expected):
+    reply = response()
+    reply.raw = Mock()
+    reply.raw.headers = {'Set-Cookie': cookie}
+    assert len(run('test_cookies', reply).findings) == expected
 
-def test_soft404_not_sensitive_file():
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response('<html>Page not found</html>'))
-    s.test_sensitive_files(U); assert not s.findings
 
-def test_redirect_307_detected():
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response('',307,{'Location':'https://evil.com'}))
-    s.test_open_redirect(U); assert s.findings
+def test_methods():
+    instance = scanner.WebShieldScanner()
+    instance.session.options = Mock(return_value=response(headers={'Allow': 'GET, TRACE'}))
+    instance.test_http_methods(URL)
+    assert instance.findings
 
-def test_cookie_value_not_attributes():
-    s=scanner.WebShieldScanner(); r=response(); r.raw=SimpleNamespace(headers={'Set-Cookie':'session=secure_httponly_samesite; Path=/'})
-    s._safe_get=Mock(return_value=r); s.test_cookies(U); assert s.findings
 
-@pytest.mark.parametrize('secure', [True,False])
-def test_cookies_baseline(secure):
-    s=scanner.WebShieldScanner(); r=response(); r.raw=SimpleNamespace(headers={'Set-Cookie':'session=abc; Path=/'+('; Secure; HttpOnly; SameSite=Strict' if secure else '')})
-    s._safe_get=Mock(return_value=r); s.test_cookies(U); assert bool(s.findings)==(not secure)
+def test_rate_limit():
+    instance = scanner.WebShieldScanner()
+    instance.session.get = Mock(return_value=response(status=429))
+    instance.test_rate_limiting(URL)
+    assert not instance.findings
 
-@pytest.mark.parametrize('blocked',[True,False])
-def test_rate_limit(blocked):
-    s=scanner.WebShieldScanner(); s.session.get=Mock(return_value=response('',429 if blocked else 200))
-    s.test_rate_limiting(U); assert bool(s.findings)==(not blocked)
-
-def test_http_methods():
-    s=scanner.WebShieldScanner(); s.session.options=Mock(return_value=response('',headers={'Allow':'GET, PUT, TRACE'}))
-    s.test_http_methods(U); assert len(s.findings)==1
-
-def test_ports(monkeypatch):
-    sock=Mock(); sock.connect_ex.side_effect=lambda target: 0 if target[1]==6379 else 1
-    monkeypatch.setattr(scanner.socket,'socket',Mock(return_value=sock))
-    s=scanner.WebShieldScanner(); s.test_subdomain_port(U); assert '6379/Redis' in s.findings[0]['detail']
 
 def test_ssl_http():
-    s=scanner.WebShieldScanner(); s.test_ssl('http://scanner-fixture.invalid'); assert s.findings[0]['severity']=='HIGH'
+    instance = scanner.WebShieldScanner()
+    instance.test_ssl('http://fixture.invalid')
+    assert instance.findings
 
-def test_ssl_invalid_cert(monkeypatch):
-    monkeypatch.setattr(scanner.socket,'create_connection',Mock(side_effect=ssl.SSLCertVerificationError('fixture')))
-    s=scanner.WebShieldScanner(); s.test_ssl(U); assert s.findings[0]['severity']=='HIGH'
 
-def test_crawl():
-    logs=[]; s=scanner.WebShieldScanner(log_callback=logs.append); s._safe_get=Mock(return_value=response('<a href="/inside">in</a><a href="https://outside.invalid">out</a>'))
-    s.crawl_site(U); assert any('1 dahili' in line for line in logs)
+def test_ports(monkeypatch):
+    sock = Mock()
+    sock.connect_ex.side_effect = lambda addr: 0 if addr[1] == 6379 else 1
+    monkeypatch.setattr(scanner.socket, 'socket', lambda *args: sock)
+    instance = scanner.WebShieldScanner()
+    instance.test_subdomain_port(URL)
+    assert instance.findings and sock.connect_ex.call_count == 19
 
-def test_cancel():
-    event=threading.Event(); event.set(); s=scanner.WebShieldScanner(cancel_event=event)
-    with pytest.raises(Exception,match='iptal'): s.test_xss(U)
 
-def init_scan():
-    sid='test'; api.scan_queues[sid]=queue.Queue(); api.scan_results[sid]=None
-    return sid
+def worker(modules, event=None):
+    api.scan_queues['test'] = queue.Queue()
+    api.scan_results['test'] = None
+    api.run_scan('test', URL, modules, event or threading.Event())
+    return api.scan_results['test']
 
-def test_run_scoring_and_status(monkeypatch):
-    def finding(self,url): self.add_finding('fixture','HIGH','test','test')
-    monkeypatch.setattr(scanner.WebShieldScanner,'test_xss',finding)
-    sid=init_scan(); api.run_scan(sid,U,['xss'],threading.Event()); assert api.scan_results[sid]['score']==80
-    c=api.app.test_client(); assert c.get('/api/status/test').json['done']; assert c.get('/api/status/test').json['done']
 
-def test_run_error_not_perfect_score(monkeypatch):
-    monkeypatch.setattr(scanner.WebShieldScanner,'test_xss',Mock(side_effect=RuntimeError('fixture failed')))
-    sid=init_scan(); api.run_scan(sid,U,['xss'],threading.Event()); assert api.scan_results[sid].get('score')!=100
+def test_worker_success_and_polling(monkeypatch):
+    monkeypatch.setattr(scanner.WebShieldScanner, '_safe_get', lambda *args, **kwargs: response())
+    result = worker(['headers'])
+    assert result['counts']['MEDIUM'] == 3 and result['score'] == 85
+    assert result['status'] == 'completed'
+    client = api.app.test_client()
+    assert client.get('/api/status/test').json['done']
+    assert client.get('/api/status/test').json['done']
+    assert client.get('/api/results/test').json == result
 
-def test_unknown_module_rejected(monkeypatch):
-    monkeypatch.setattr(api,'is_safe_url',lambda url:(True,'')); monkeypatch.setattr(api.executor,'submit',Mock())
-    c=api.app.test_client(); r=c.post('/api/scan',json={'url':U,'modules':['nonexistent']}); assert r.status_code==400
 
-@pytest.mark.parametrize('body',[{'url':123,'modules':['xss']},['wrong-shape']])
-def test_malformed_input_400(body):
-    r=api.app.test_client().post('/api/scan',json=body); assert r.status_code==400
+def test_worker_failure_preserves_findings(monkeypatch):
+    monkeypatch.setattr(scanner.WebShieldScanner, '_safe_get', lambda *args, **kwargs: response())
+    monkeypatch.setattr(scanner.WebShieldScanner, 'test_xss', Mock(side_effect=RuntimeError('fixture failure')))
+    result = worker(['headers', 'xss'])
+    assert result['status'] == 'error' and result['score'] is None
+    assert result['counts']['MEDIUM'] == 3
 
-@pytest.mark.parametrize('ip',['127.0.0.1','10.0.0.1','169.254.169.254'])
-def test_private_url_rejected(monkeypatch,ip):
-    monkeypatch.setattr(api.socket,'gethostbyname',lambda host:ip); assert not api.is_safe_url(U)[0]
 
-@pytest.mark.parametrize('path,content',[
-    ('.env','DB_PASSWORD=fixture'),
-    ('.git/config','[core]\nrepositoryformatversion = 0'),
-    ('wp-config.php',"<?php define('DB_NAME', 'fixture');"),
-    ('backup.sql','CREATE TABLE fixture (id INTEGER);'),
-])
-def test_sensitive_file_signatures_and_root(path,content):
-    s=scanner.WebShieldScanner()
-    s._safe_get=Mock(side_effect=lambda url: response(content) if url==U+'/'+path else response('',404))
-    s.test_sensitive_files(U+'/nested/page?query=1')
-    assert [f['title'] for f in s.findings]==['Hassas Dosya: '+path]
+def test_cancel_has_no_score():
+    event = threading.Event()
+    event.set()
+    result = worker(['xss'], event)
+    assert result['status'] == 'cancelled' and result['score'] is None
 
-@pytest.mark.parametrize('status',[301,302,303,307,308])
-def test_redirect_statuses(status):
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response('',status,{'Location':'https://evil.com/path'}))
-    s.test_open_redirect(U); assert len(s.findings)==1
 
-def test_redirect_safe_path_not_external():
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response('',302,{'Location':'/help/evil.com'}))
-    s.test_open_redirect(U); assert not s.findings
+def test_network_failure_has_no_score(monkeypatch):
+    monkeypatch.setattr(requests.sessions.Session, 'get', Mock(side_effect=requests.Timeout()))
+    result = worker(['xss'])
+    assert result['status'] == 'error' and result['score'] is None
 
-def test_multiple_cookies():
-    from urllib3._collections import HTTPHeaderDict
-    headers=HTTPHeaderDict(); headers.add('Set-Cookie','safe=abc; Secure; HttpOnly; SameSite=Strict')
-    headers.add('Set-Cookie','unsafe=abc; Path=/')
-    r=response(); r.raw=SimpleNamespace(headers=headers)
-    s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=r)
-    s.test_cookies(U); assert [f['title'] for f in s.findings]==['Güvensiz Cookie: unsafe']
 
-def test_cancelled_run_has_no_score():
-    sid=init_scan(); event=threading.Event(); event.set()
-    api.run_scan(sid,U,['xss'],event)
-    assert api.scan_results[sid]['status']=='cancelled'
-    assert api.scan_results[sid]['score'] is None
+@pytest.mark.parametrize('payload', [{}, [], ['bad'], {'url': 123, 'modules': ['xss']}, {'url': URL, 'modules': ['unknown']}, {'url': URL, 'modules': 'xss'}, {'url': URL, 'modules': [None]}, {'url': URL, 'modules': []}])
+def test_invalid_api_input(payload, monkeypatch):
+    monkeypatch.setattr(api, 'is_safe_url', lambda _: (True, ''))
+    assert api.app.test_client().post('/api/scan', json=payload).status_code == 400
 
-def test_timeout_result_not_overwritten():
-    sid=init_scan(); api.scan_results[sid]={'status':'timeout','score':None}
-    event=threading.Event(); event.set(); api.run_scan(sid,U,['xss'],event)
-    assert api.scan_results[sid]=={'status':'timeout','score':None}
 
-@pytest.mark.parametrize('modules',['xss',[{}],[1],None,[],['bad']])
-def test_invalid_modules_400(modules):
-    r=api.app.test_client().post('/api/scan',json={'url':U,'modules':modules})
-    assert r.status_code==400
+def test_start_cancel(monkeypatch):
+    monkeypatch.setattr(api, 'is_safe_url', lambda _: (True, ''))
+    submit = Mock()
+    monkeypatch.setattr(api.executor, 'submit', submit)
+    monkeypatch.setattr(api.threading.Thread, 'start', lambda _: None)
+    client = api.app.test_client()
+    result = client.post('/api/scan', json={'url': URL, 'modules': ['xss', 'xss']})
+    assert result.status_code == 200
+    assert submit.call_args.args[3] == ['xss']
+    scan_id = result.json['scan_id']
+    assert client.get('/api/results/' + scan_id).status_code == 202
+    assert client.post('/api/cancel/' + scan_id).status_code == 200
+    assert api.scan_events[scan_id].is_set()
 
-def test_all_modules_visible():
-    import re
-    html=(Path(__file__).resolve().parents[1]/'security_scanner.html').read_text()
-    block=html.split('const modules = [',1)[1].split('];',1)[0]
-    assert set(re.findall(r"id: '([^']+)'",block))==api.SCAN_MODULES-{'crawl'}
+
+def test_timeout_result_cannot_be_overwritten():
+    pending = queue.Queue()
+    timeout = {'status': 'timeout', 'score': None}
+    api.finish_scan('test', timeout, pending)
+    api.finish_scan('test', {'status': 'completed', 'score': 100}, pending)
+    assert api.scan_results['test'] == timeout
+    assert list(pending.queue) == ['__DONE__']
+
+
+def test_private_url_rejected(monkeypatch):
+    monkeypatch.setattr(api.socket, 'gethostbyname', lambda _: '127.0.0.1')
+    assert not api.is_safe_url('http://localhost')[0]

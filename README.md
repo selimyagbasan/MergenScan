@@ -42,12 +42,19 @@ www.mergenscan.tech
 
 ## Testler
 
-```bash
+```sh
 python -m pip install -r requirements-dev.txt
 python -m pytest tests -q
+node tests/test_ui.cjs
 ```
 
-Testler kontrollü HTTP yanıtları kullanır; dış hedeflere tarama göndermez.
-Tarama API'si tamamlanan işlemlerde `status: completed` ve sayısal `score`,
-hata, iptal veya zaman aşımında ise `status: error/cancelled/timeout` ve
-`score: null` döndürür. Eksik taramalar güvenlik değerlendirmesi sayılmaz.
+Testler kontrollü yanıtlar kullanır; dış hedeflere tarama isteği göndermez.
+Başarısız, iptal edilen veya zaman aşımına uğrayan taramalarda skor `null`
+ve sonuç durumu sırasıyla `error`, `cancelled` veya `timeout` olur.
+Yalnızca `completed` durumunda skor hesaplanır. Kontroller sezgiseldir;
+bulgu olmaması uygulamanın güvenli olduğunu kanıtlamaz.
+
+Tarama kuyrukları ve sonuçları süreç belleğinde tutulur. Bu nedenle Procfile
+tek Gunicorn worker ve sekiz thread kullanır. Birden fazla worker veya sunucu
+örneğine ölçeklemek için ortak görev/sonuç deposu gerekir. Yeniden başlatmada
+bellekteki tarama durumları kaybolur.
