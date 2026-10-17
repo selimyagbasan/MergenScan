@@ -45,6 +45,12 @@ executor = ThreadPoolExecutor(max_workers=5)
 API_KEY      = os.environ.get("WEBSHIELD_API_KEY", "")
 REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "true").lower() == "true"
 
+SCAN_MODULES = frozenset({
+    "crawl", "sqli", "xss", "csrf", "headers", "traversal", "files",
+    "redirect", "cmdi", "ssl", "cors", "cookies", "methods", "clickjack",
+    "ratelimit", "tech", "robots", "waf", "ports",
+})
+
 # ── URL Güvenlik Kontrolü ──────────────────────────────────────────────────────
 
 def is_safe_url(url):
@@ -172,9 +178,15 @@ def start_scan():
     if not check_api_key():
         return jsonify({"error": "Yetkisiz erişim"}), 401
 
-    data    = request.get_json(silent=True) or {}
-    url     = (data.get("url") or "").strip()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("url"), str):
+        return jsonify({"error": "URL metin olmalı ve istek bir JSON nesnesi içermeli."}), 400
+    url = data["url"].strip()
     modules = data.get("modules", [])
+    if (not isinstance(modules, list) or not modules
+            or any(not isinstance(mod, str) or mod not in SCAN_MODULES for mod in modules)):
+        return jsonify({"error": "Geçerli tarama modülleri seçin."}), 400
+    modules = list(dict.fromkeys(modules))
 
     if not url:
         return jsonify({"error": "URL gerekli"}), 400
@@ -211,6 +223,8 @@ def start_scan():
         except TimeoutError:
             if sid in scan_events:
                 scan_events[sid].set()
+            scan_results[sid] = {"findings": [], "counts": {"HIGH": 0, "MEDIUM": 0, "LOW": 0},
+                                 "score": None, "status": "timeout", "error": "Tarama zaman aşımına uğradı."}
             if sid in scan_queues:
                 scan_queues[sid].put("[!] Tarama zaman aşımına uğradı.")
                 scan_queues[sid].put("__DONE__")
@@ -279,7 +293,8 @@ def run_scan(scan_id, url, modules, cancel_event):
             if test_fn:
                 test_fn()
 
-        q.put("__PROGRESS__:100")
+        if not cancel_event.is_set():
+            q.put("__PROGRESS__:100")
 
         findings = scanner.findings
         counts   = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
@@ -290,14 +305,21 @@ def run_scan(scan_id, url, modules, cancel_event):
 
         # FİX: scan_results önce set edilir, sonra __DONE__ kuyruğa eklenir
         # Böylece frontend sonucu istediğinde her zaman hazır olur
-        scan_results[scan_id] = {"findings": findings, "counts": counts, "score": score}
+        if (scan_results.get(scan_id) or {}).get("status") != "timeout":
+            scan_results[scan_id] = {
+                "findings": findings, "counts": counts,
+                "score": None if cancel_event.is_set() else score,
+                "status": "cancelled" if cancel_event.is_set() else "completed",
+            }
         q.put("__DONE__")
 
     except Exception as e:
         q.put(f"[✗] Tarama hatası: {e}")
         # FİX: Hata durumunda da boş sonuç set edilir, None kalmaması için
         if scan_results.get(scan_id) is None:
-            scan_results[scan_id] = {"findings": [], "counts": {"HIGH": 0, "MEDIUM": 0, "LOW": 0}, "score": 100}
+            scan_results[scan_id] = {"findings": [], "counts": {"HIGH": 0, "MEDIUM": 0, "LOW": 0}, "score": None,
+                                     "status": "cancelled" if cancel_event.is_set() else "error",
+                                     "error": "Tarama tamamlanamadı."}
         q.put("__DONE__")
 
 

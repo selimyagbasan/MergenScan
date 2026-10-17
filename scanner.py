@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import time
-import html as html_module
+from http.cookies import SimpleCookie, CookieError
 import socket
 import ipaddress
 import ssl
@@ -85,7 +85,7 @@ class WebShieldScanner:
         if r:
             for payload in payloads:
                 test_r = self._safe_get(url, params={"id": payload})
-                if test_r and any(err in test_r.text.lower() for err in sql_errors):
+                if test_r is not None and any(err in test_r.text.lower() for err in sql_errors):
                     self.add_finding(
                         "SQL Injection", "HIGH",
                         "'id' parametresi SQL hatasına yol açtı.",
@@ -103,9 +103,8 @@ class WebShieldScanner:
         for payload in payloads:
             r = self._safe_get(url, params={"q": payload})
             if r:
-                # FİX: HTML decode edip karşılaştır — encode edilmiş payload yanlış pozitif vermez
-                decoded_text = html_module.unescape(r.text)
-                if payload in decoded_text:
+                # Encoded HTML is inert text, not an executable reflection.
+                if payload in r.text:
                     self.add_finding(
                         "Cross-Site Scripting (XSS)", "HIGH",
                         "Payload encode edilmeden yansıtıldı.",
@@ -127,26 +126,45 @@ class WebShieldScanner:
         class FormParser(HTMLParser):
             def __init__(self):
                 super().__init__()
-                self.has_csrf = False
+                self.forms = []
+                self.current = None
+
             def handle_starttag(self, tag, attrs):
-                if tag == "input":
-                    d = dict(attrs)
+                d = dict(attrs)
+                if tag == "form":
+                    self.current = {
+                        "id": d.get("id"),
+                        "post": (d.get("method") or "get").lower() == "post",
+                        "token": False,
+                    }
+                    self.forms.append(self.current)
+                elif tag == "input":
                     name = (d.get("name") or "").lower()
                     if "csrf" in name or "token" in name:
-                        self.has_csrf = True
+                        owner = d.get("form")
+                        if owner:
+                            token_owners.add(owner)
+                        elif self.current is not None:
+                            self.current["token"] = True
 
+            def handle_endtag(self, tag):
+                if tag == "form":
+                    self.current = None
+
+        token_owners = set()
         parser = FormParser()
         parser.feed(r.text)
-
-        if not parser.has_csrf:
+        missing = sum(1 for form in parser.forms if form["post"]
+                      and not form["token"] and form["id"] not in token_owners)
+        if missing:
             self.add_finding(
                 "CSRF Token Eksik", "MEDIUM",
-                "Form input'larında CSRF token alanı bulunamadı.",
-                "Her POST formuna gizli CSRF token alanı ekleyin."
+                f"{missing} POST formunda CSRF token alanı bulunamadı; sunucu koruması ayrıca doğrulanmalıdır.",
+                "Durum değiştiren formlarda CSRF korumasını doğrulayın."
             )
-            self._log("[!] CSRF token eksik.")
+            self._log(f"[!] {missing} POST formunda CSRF token eksik.")
         else:
-            self._log("[✓] CSRF token mevcut.")
+            self._log("[✓] Tokensiz POST formu tespit edilmedi.")
         time.sleep(0.5)
 
     def test_headers(self, url):
@@ -193,11 +211,20 @@ class WebShieldScanner:
     def test_sensitive_files(self, url):
         self._check_cancel()
         self._log("[i] Hassas dosya sızıntıları kontrol ediliyor...")
-        paths = [".env", ".git/config", "wp-config.php", "backup.sql"]
+        signatures = {
+            ".env": r"(?m)^\s*(?:export\s+)?[A-Z_][A-Z0-9_]*\s*=\s*[^\r\n]+",
+            ".git/config": r"(?m)^\s*\[(?:core|remote\s+[^\]]+)\]\s*$",
+            "wp-config.php": r"(?s)<\?php.*define\s*\(\s*['\"]DB_(?:NAME|USER|PASSWORD|HOST)['\"]",
+            "backup.sql": r"(?im)^\s*(?:CREATE\s+TABLE|INSERT\s+INTO|--\s*(?:MySQL|PostgreSQL).*dump)\b",
+        }
+        parsed = urlparse(url)
+        base = f"{parsed.scheme}://{parsed.netloc}/"
         found = False
-        for path in paths:
-            r = self._safe_get(f"{url.rstrip('/')}/{path}")
-            if r and r.status_code == 200 and len(r.text) > 10:
+        for path, signature in signatures.items():
+            r = self._safe_get(urljoin(base, path))
+            if (r is not None and r.status_code == 200
+                    and not _re.search(r"<\s*(?:!doctype|html|body)\b", r.text, _re.I)
+                    and _re.search(signature, r.text)):
                 self.add_finding(
                     f"Hassas Dosya: {path}", "HIGH",
                     f"{path} herkese açık.",
@@ -213,7 +240,7 @@ class WebShieldScanner:
         self._check_cancel()
         self._log("[i] Open Redirect denemeleri yapılıyor...")
         r = self._safe_get(url, params={"next": "https://evil.com"}, allow_redirects=False)
-        if r and r.status_code in (301, 302) and "evil.com" in r.headers.get("Location", ""):
+        if r and r.status_code in (301, 302, 303, 307, 308) and urlparse(urljoin(url, r.headers.get("Location", ""))).hostname == "evil.com":
             self.add_finding(
                 "Open Redirect", "MEDIUM",
                 "Dış URL'ye yönlendirme yapıldı.",
@@ -310,22 +337,29 @@ class WebShieldScanner:
         r = self._safe_get(url)
         if not r:
             return
-        cookie_hdrs = [v for k, v in r.raw.headers.items() if k.lower() == 'set-cookie'] if r.raw else []
+        raw_headers = getattr(r.raw, 'headers', None)
+        if raw_headers is not None and hasattr(raw_headers, 'getlist'):
+            cookie_hdrs = raw_headers.getlist('Set-Cookie')
+        else:
+            cookie_hdrs = [v for k, v in (raw_headers or r.headers).items() if k.lower() == 'set-cookie']
         if not cookie_hdrs:
             self._log("[✓] Yanıtta Set-Cookie başlığı yok.")
             time.sleep(0.5)
             return
         found_issue = False
         for cs in cookie_hdrs:
-            name = cs.split('=')[0].strip()
-            low = cs.lower()
-            missing = []
-            if 'secure' not in low:
-                missing.append('Secure')
-            if 'httponly' not in low:
-                missing.append('HttpOnly')
-            if 'samesite' not in low:
-                missing.append('SameSite')
+            cookie = SimpleCookie()
+            try:
+                cookie.load(cs)
+            except CookieError:
+                self._log("[!] Cookie başlığı ayrıştırılamadı.")
+                continue
+            if not cookie:
+                continue
+            name, morsel = next(iter(cookie.items()))
+            missing = [label for attr, label in
+                       [('secure', 'Secure'), ('httponly', 'HttpOnly'), ('samesite', 'SameSite')]
+                       if not morsel[attr]]
             if missing:
                 self.add_finding(f"Güvensiz Cookie: {name}", "MEDIUM",
                     f"Cookie '{name}' eksik bayraklar: {', '.join(missing)}.",

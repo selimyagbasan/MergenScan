@@ -39,3 +39,15 @@ www.mergenscan.tech
 - Tüm kullanıcı girdileri doğrulanır
 - Güvenlik başlıkları (CSP, HSTS, X-Frame-Options) tüm yanıtlara eklenir
 
+
+## Testler
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q
+```
+
+Testler kontrollü HTTP yanıtları kullanır; dış hedeflere tarama göndermez.
+Tarama API'si tamamlanan işlemlerde `status: completed` ve sayısal `score`,
+hata, iptal veya zaman aşımında ise `status: error/cancelled/timeout` ve
+`score: null` döndürür. Eksik taramalar güvenlik değerlendirmesi sayılmaz.

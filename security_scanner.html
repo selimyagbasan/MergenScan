@@ -497,6 +497,12 @@
       { id: 'cors',      name: 'CORS',              icon: 'public' },
       { id: 'ssl',       name: 'SSL/TLS',           icon: 'https' },
       { id: 'waf',       name: 'WAF Tespiti',       icon: 'security' },
+      { id: 'cookies',   name: 'Cookie Bayrakları', icon: 'cookie' },
+      { id: 'methods',   name: 'HTTP Metodları',   icon: 'http' },
+      { id: 'clickjack', name: 'Clickjacking',    icon: 'ads_click' },
+      { id: 'ratelimit', name: 'Rate Limiting',   icon: 'speed' },
+      { id: 'tech',      name: 'Teknoloji Tespiti', icon: 'memory' },
+      { id: 'ports',     name: 'Port Taraması',   icon: 'router' },
       { id: 'robots',    name: 'Robots/Sitemap',    icon: 'smart_toy' },
     ];
 
@@ -700,6 +706,10 @@
 
     /* ── Show Results ── */
     function showResults(result) {
+      if (result.status && result.status !== 'completed') {
+        document.getElementById('btnScan').disabled = false;
+        throw new Error(result.error || 'Tarama tamamlanmadı; güvenlik puanı hesaplanmadı.');
+      }
       lastScanResult = result;
       document.getElementById('progressSection').style.display = 'none';
       document.getElementById('resultsSection').style.display = 'flex';
