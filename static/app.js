@@ -32,6 +32,10 @@
           ? 'Tarama şu anda kullanılamıyor: sunucu yöneticisi erişim anahtarını yapılandırmalı.'
           : config.auth_required ? 'Tarama için erişim bölümüne API anahtarınızı girin.' : '';
         document.getElementById('btnScan').disabled = !config.scan_available;
+        if (config.auth_required && config.scan_available) {
+          const details = document.getElementById('authDetails');
+          if (details) details.open = true;
+        }
       } catch (_) {
         document.getElementById('scanAvailability').textContent = 'Erişim bilgisi alınamadı. Tarama başlatırken sunucu yanıtı kontrol edilir.';
       }
