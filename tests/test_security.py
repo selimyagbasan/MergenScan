@@ -150,8 +150,34 @@ def test_scan_routes_require_key(path,method):
 def test_empty_server_key_fails_closed(monkeypatch):
     monkeypatch.setattr(api,'API_KEY','')
     r=api.app.test_client().post('/api/scan',json={'url':'https://fixture.invalid','modules':['headers']})
-    assert r.status_code==401
+    assert r.status_code==503
+    assert r.json['code']=='auth_not_configured'
     assert api.app.test_client().get('/api/config').json=={'auth_required':True,'scan_available':False}
+
+
+@pytest.mark.parametrize('path,method', [('/api/scan','post'),('/api/status/id','get'),
+                                      ('/api/results/id','get'),('/api/cancel/id','post')])
+def test_misconfiguration_is_not_user_auth_failure(monkeypatch, path, method):
+    monkeypatch.setattr(api, 'API_KEY', '')
+    response = getattr(api.app.test_client(), method)(path)
+    assert response.status_code == 503
+    assert response.json['code'] == 'auth_not_configured'
+
+
+def test_pasted_key_whitespace_is_accepted():
+    api.scan_results['id'] = {'status': 'completed', 'score': 100}
+    client = api.app.test_client()
+    response = client.get('/api/results/id', headers={'X-API-Key': '  fixture-secret  '})
+    assert response.status_code == 200
+    response = client.get('/api/results/id', headers={'X-API-Key': 'wrong'})
+    assert response.status_code == 401 and response.json['code'] == 'invalid_api_key'
+
+
+def test_explicit_public_mode_does_not_require_key(monkeypatch):
+    monkeypatch.setattr(api, 'REQUIRE_AUTH', False)
+    monkeypatch.setattr(api, 'API_KEY', '')
+    api.scan_results['id'] = {'status': 'completed', 'score': 100}
+    assert api.app.test_client().get('/api/results/id').status_code == 200
 
 
 def test_unauthorized_poll_does_not_consume_log():

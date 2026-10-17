@@ -32,6 +32,18 @@ Tarama durumu ve istek limitleri süreç belleğindedir. Yeniden başlatmada son
 kaybolur; birden fazla worker/örnek için ortak görev, sonuç ve limit deposu gerekir.
 Paylaşılan API anahtarı kullanıcı bazında sonuç sahipliği sağlamaz.
 
+### Tarama erişim hatası
+
+`/api/config` yanıtında `auth_required: true, scan_available: false` görülüyorsa
+sunucuda `WEBSHIELD_API_KEY` eksiktir. Bu bir ziyaretçi yetkisi hatası değildir.
+Anahtarı HTML, JavaScript veya Git dosyalarına yazmak sunucuyu yapılandırmaz.
+Barındırma servisinin ortam değişkenlerinde yeni bir anahtar tanımlayın ve
+uygulamayı yeniden dağıtın. Daha önce kaynak koduna yazılmış anahtarı kullanmayın.
+
+Yapılandırma eksikliği API'de `503 / auth_not_configured`, eksik/yanlış istemci
+anahtarı ise `401 / invalid_api_key` döndürür. Tarayıcı boş anahtarla isteği
+başlatmaz; yapıştırılan anahtarın başındaki/sonundaki boşluklar temizlenir.
+
 ## Kontroller ve sınırları
 
 | Kontrol | Kanıt / kapsam |

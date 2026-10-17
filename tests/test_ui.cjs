@@ -37,6 +37,7 @@ for (const id of ['cookies', 'methods', 'clickjack', 'ratelimit', 'tech', 'ports
 console.log('UI checks passed: script syntax, completed/failed/cancelled/timeout results, partial findings, and 18 modules.');
 
 assert.doesNotMatch(html, /\son(?:click|keydown|error)=/);
+assert.doesNotMatch(html, /id="apiKey"[^>]*\bvalue="[^"]+"/);
 assert.doesNotMatch(js, /Math\.random/);
 const safeUrlSource = js.slice(js.indexOf('    function safeWebURL'), js.indexOf('    function scanFetch'));
 vm.runInContext(safeUrlSource, context);

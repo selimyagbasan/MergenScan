@@ -18,7 +18,7 @@
 
     function scanFetch(path, options = {}) {
       const headers = new Headers(options.headers || {});
-      const key = document.getElementById('apiKey').value;
+      const key = document.getElementById('apiKey').value.trim();
       if (key) headers.set('X-API-Key', key);
       return fetch(path, { ...options, headers, credentials: 'same-origin' });
     }
@@ -36,8 +36,10 @@
           const details = document.getElementById('authDetails');
           if (details) details.open = true;
         }
+        return config;
       } catch (_) {
-        document.getElementById('scanAvailability').textContent = 'Erişim bilgisi alınamadı. Tarama başlatırken sunucu yanıtı kontrol edilir.';
+        document.getElementById('scanAvailability').textContent = 'Erişim bilgisi alınamadı. Lütfen yeniden deneyin.';
+        return null;
       }
     }
 
@@ -66,6 +68,7 @@
     let currentScanId = null;
     let lastScanResult = null;
     let scannedUrl = '';
+    let scanStarting = false;
 
     /* ── Build Module Toggles on Load ── */
     document.addEventListener('DOMContentLoaded', () => {
@@ -186,11 +189,27 @@
 
     /* ── Start Scan ── */
     async function startScan() {
+      if (scanStarting || currentScanId) return;
       const url = document.getElementById('targetUrl').value.trim();
       if (!url) return alert('Lütfen URL girin.');
 
       const selectedModules = getSelectedModules();
       if (selectedModules.length === 0) return alert('Lütfen en az bir modül seçin.');
+
+      scanStarting = true;
+      const config = await loadScanConfig();
+      if (!config || !config.scan_available) {
+        scanStarting = false;
+        return;
+      }
+      if (config.auth_required && !document.getElementById('apiKey').value.trim()) {
+        document.getElementById('scanAvailability').textContent = 'Tarama için sunucuda tanımlı API anahtarını girin.';
+        const details = document.getElementById('authDetails');
+        if (details) details.open = true;
+        document.getElementById('apiKey').focus();
+        scanStarting = false;
+        return;
+      }
 
       scannedUrl = url;
 
@@ -272,6 +291,8 @@
         document.getElementById('mainContent').style.display = 'flex';
         document.getElementById('bentoGrid').style.display = 'grid';
         document.getElementById('progressSection').style.display = 'none';
+      } finally {
+        scanStarting = false;
       }
     }
 

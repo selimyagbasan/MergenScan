@@ -43,8 +43,8 @@ limiter = Limiter(
 
 executor = ThreadPoolExecutor(max_workers=5)
 
-API_KEY      = os.environ.get("WEBSHIELD_API_KEY", "")
-REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "true").lower() == "true"
+API_KEY      = os.environ.get("WEBSHIELD_API_KEY", "").strip()
+REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "true").strip().lower() != "false"
 
 # ── URL Güvenlik Kontrolü ──────────────────────────────────────────────────────
 
@@ -60,7 +60,17 @@ def check_api_key():
     if not REQUIRE_AUTH:
         return True
     return bool(API_KEY) and secrets.compare_digest(
-        request.headers.get("X-API-Key", "").encode(), API_KEY.encode())
+        request.headers.get("X-API-Key", "").strip().encode(), API_KEY.encode())
+
+
+def scan_access_error():
+    if REQUIRE_AUTH and not API_KEY:
+        return jsonify({"error": "Tarama sunucusu yapılandırılmamış: sunucu yöneticisi WEBSHIELD_API_KEY tanımlamalı.",
+                        "code": "auth_not_configured"}), 503
+    if not check_api_key():
+        return jsonify({"error": "API anahtarı eksik veya geçersiz. Tarama erişimi bölümündeki anahtarı kontrol edin.",
+                        "code": "invalid_api_key"}), 401
+    return None
 
 
 @app.route("/api/config")
@@ -180,8 +190,9 @@ def index():
 @app.route("/api/scan", methods=["POST"])
 @limiter.limit("5 per hour; 20 per day")
 def start_scan():
-    if not check_api_key():
-        return jsonify({"error": "Yetkisiz erişim"}), 401
+    access_error = scan_access_error()
+    if access_error is not None:
+        return access_error
 
     data    = request.get_json(silent=True) or {}
     if not isinstance(data, dict) or not isinstance(data.get("url", ""), str):
@@ -258,8 +269,9 @@ def start_scan():
 
 @app.route("/api/cancel/<scan_id>", methods=["POST"])
 def cancel_scan(scan_id):
-    if not check_api_key():
-        return jsonify({"error": "Yetkisiz erişim"}), 401
+    access_error = scan_access_error()
+    if access_error is not None:
+        return access_error
     if scan_id in scan_events:
         scan_events[scan_id].set()
         return jsonify({"status": "cancelled"})
@@ -356,8 +368,9 @@ def run_scan(scan_id, url, modules, cancel_event):
 @app.route("/api/status/<scan_id>", methods=["GET"])
 @limiter.limit("120 per minute")
 def get_status(scan_id):
-    if not check_api_key():
-        return jsonify({"error": "Yetkisiz erişim"}), 401
+    access_error = scan_access_error()
+    if access_error is not None:
+        return access_error
     q = scan_queues.get(scan_id)
     if not q:
         # FİX: Kuyruk silinmiş ama sonuç varsa → tarama tamamlandı demektir, hata değil
@@ -384,8 +397,9 @@ def get_status(scan_id):
 
 @app.route("/api/results/<scan_id>", methods=["GET"])
 def get_results(scan_id):
-    if not check_api_key():
-        return jsonify({"error": "Yetkisiz erişim"}), 401
+    access_error = scan_access_error()
+    if access_error is not None:
+        return access_error
     result = scan_results.get(scan_id)
     if result is not None:
         return jsonify(result)
