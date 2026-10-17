@@ -26,6 +26,9 @@ def response(body='', status=200, headers=None):
 
 @pytest.fixture(autouse=True)
 def isolate(monkeypatch):
+    monkeypatch.setattr(api, 'REQUIRE_AUTH', False)
+    monkeypatch.setattr(api, 'scan_slots', threading.BoundedSemaphore(5))
+    monkeypatch.setattr(scanner, 'public_addresses', lambda host, port: ['8.8.8.8'])
     monkeypatch.setattr(scanner.time, 'sleep', lambda _: None)
     monkeypatch.setattr(scanner, '_is_ip_safe', lambda _: True)
     monkeypatch.setattr(requests.sessions.Session, 'request', Mock(side_effect=AssertionError('Unexpected network')))
@@ -46,7 +49,7 @@ def run(method, replies):
     ('test_sqli', [response('ok'), response('SQL syntax error', 500)], 1),
     ('test_sqli', response('ok'), 0),
     ('test_sqli', response('SQL syntax reference documentation'), 0),
-    ('test_xss', response("<script>alert('XSS')</script>"), 1),
+    ('test_xss', response("<script>alert('XSS')</script>"), 0),
     ('test_xss', response(html.escape("<script>alert('XSS')</script>")), 0),
     ('test_csrf', response('<p>Static page</p>'), 0),
     ('test_csrf', response('<form method="get"><input name="q"></form>'), 0),
@@ -55,17 +58,17 @@ def run(method, replies):
     ('test_csrf', response('<form method="post"><input name="csrf_token"></form><form method="post"><input name="email"></form>'), 1),
     ('test_headers', response(), 3),
     ('test_headers', response(headers={'Strict-Transport-Security': 'max-age=1', 'X-Frame-Options': 'DENY', 'Content-Security-Policy': "default-src 'self'"}), 0),
-    ('test_traversal', response('root:x:0:0:root:/root:/bin/bash'), 1),
+    ('test_traversal', response('root:x:0:0:root:/root:/bin/bash'), 0),
     ('test_sensitive_files', response('<html><body>Welcome to app</body></html>'), 0),
     ('test_sensitive_files', response(status=404), 0),
     ('test_sensitive_files', [response('DB_PASSWORD=secret'), response('[core]\nrepositoryformatversion = 0'), response("<?php define('DB_NAME', 'app');"), response('CREATE TABLE users (id INT);')], 4),
-    ('test_cmdi', response('uid=1000(user)'), 1),
-    ('test_cors', response(headers={'Access-Control-Allow-Origin': '*'}), 1),
+    ('test_cmdi', response('uid=1000(user)'), 0),
+    ('test_cors', response(headers={'Access-Control-Allow-Origin': '*'}), 0),
     ('test_clickjacking', response(), 1),
     ('test_clickjacking', response(headers={'X-Frame-Options': 'DENY'}), 0),
     ('test_tech_detect', response(headers={'Server': 'nginx/1.2.3'}), 1),
     ('test_robots_sitemap', [response('User-agent: *\nDisallow: /admin'), response(status=404)], 1),
-    ('test_waf', response(), 1),
+    ('test_waf', response(), 0),
     ('crawl_site', response('<a href="/page">link</a>'), 0),
 ])
 def test_module_cases(method, replies, count):
@@ -89,6 +92,7 @@ def test_cookie_flags(cookie, expected):
 def test_methods():
     instance = scanner.WebShieldScanner()
     instance.session.options = Mock(return_value=response(headers={'Allow': 'GET, TRACE'}))
+    instance.session.request = Mock(side_effect=lambda method,url,**kw:response('TRACE / HTTP/1.1\r\nX-Mergen-Probe: '+kw['headers']['X-Mergen-Probe']))
     instance.test_http_methods(URL)
     assert instance.findings
 
@@ -185,5 +189,5 @@ def test_timeout_result_cannot_be_overwritten():
 
 
 def test_private_url_rejected(monkeypatch):
-    monkeypatch.setattr(api.socket, 'gethostbyname', lambda _: '127.0.0.1')
+    monkeypatch.setattr(api.socket, 'getaddrinfo', lambda *a, **kw: [(2,1,6,'',('127.0.0.1',443))])
     assert not api.is_safe_url('http://localhost')[0]

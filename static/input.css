@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+    body { font-family: 'Inter', sans-serif; }
+
+    .glass-panel {
+      background-color: rgba(249, 249, 249, 0.8);
+      backdrop-filter: blur(20px);
+    }
+
+    .ambient-shadow {
+      box-shadow: 0 24px 40px -12px rgba(26, 28, 28, 0.06);
+    }
+
+    .status-pulse {
+      position: relative;
+      width: 8px;
+      height: 8px;
+      background-color: #00452e;
+      border-radius: 50%;
+    }
+
+    .status-pulse::after {
+      content: '';
+      position: absolute;
+      top: -4px; left: -4px; right: -4px; bottom: -4px;
+      border-radius: 50%;
+      background-color: rgba(0, 133, 93, 0.5);
+      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      80%, 100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    /* Module Dropdown */
+    .module-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 20px;
+      min-width: 480px;
+      max-width: 95vw;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+      z-index: 200;
+    }
+    .module-dropdown.active { display: block; }
+
+    @media (max-width: 550px) {
+      .module-dropdown {
+        min-width: unset;
+        width: calc(100vw - 32px);
+        right: -8px;
+      }
+    }
+
+    /* Toggle Switch */
+    .toggle-track {
+      width: 36px; height: 20px;
+      background: #dadada;
+      border-radius: 10px;
+      position: relative;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .module-item.active .toggle-track { background: #000; }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+    }
+    .module-item.active .toggle-track::after {
+      transform: translateX(16px);
+    }
+
+    /* Progress bar animation */
+    .progress-fill {
+      height: 100%;
+      background: #000;
+      width: 0%;
+      transition: width 0.5s ease;
+      border-radius: 2px;
+    }
+
+    /* Scanner pulse animation */
+    @keyframes scanner-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .scanner-pulse { animation: scanner-pulse 1.5s ease-in-out infinite; }
+
+    /* Finding card */
+    .finding-body { display: none; }
+    .finding-card.open .finding-body { display: block; }
+    .finding-card.open .finding-chevron { transform: rotate(180deg); }
+    .finding-chevron { transition: transform 0.2s; }
+
+    /* Fade in animation */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up { animation: fadeInUp 0.5s ease both; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 3px; }
+  

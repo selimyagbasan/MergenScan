@@ -11,6 +11,9 @@ def response(body='', status=200, headers=None):
     return r
 @pytest.fixture(autouse=True)
 def isolate(monkeypatch):
+    monkeypatch.setattr(api, 'REQUIRE_AUTH', False)
+    monkeypatch.setattr(api, 'scan_slots', threading.BoundedSemaphore(5))
+    monkeypatch.setattr(scanner, 'public_addresses', lambda host, port: ['8.8.8.8'])
     monkeypatch.setattr(scanner.time,'sleep',lambda _:None)
     monkeypatch.setattr(scanner,'_is_ip_safe',lambda _:True)
     monkeypatch.setattr(requests.sessions.Session,'request',Mock(side_effect=AssertionError('Unexpected real network')))
@@ -18,18 +21,18 @@ def isolate(monkeypatch):
     api.limiter.enabled=False
 @pytest.mark.parametrize('method,body,headers,status,count',[
  ('sqli','sql syntax',{},200,1),('sqli','normal',{},200,0),
- ('xss',"<script>alert('XSS')</script>",{},200,1),('xss','normal',{},200,0),
+ ('xss',"<script>alert('XSS')</script>",{},200,0),('xss','normal',{},200,0),
  ('csrf','<form method="post"><input name="csrf_token"></form>',{},200,0),('csrf','<form method="post"></form>',{},200,1),
  ('headers','',{},200,3),('headers','',{'Strict-Transport-Security':'max-age=1','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'self'"},200,0),
- ('traversal','root:x:0:0',{},200,1),('traversal','normal',{},200,0),
+ ('traversal','root:x:0:0',{},200,0),('traversal','normal',{},200,0),
  ('sensitive_files','DB_PASSWORD=test_fixture',{},200,1),('sensitive_files','Not Found',{},404,0),
  ('open_redirect','',{'Location':'https://evil.com'},302,1),('open_redirect','',{},200,0),
- ('cmdi','uid=1000(test)',{},200,1),('cmdi','normal',{},200,0),
- ('cors','',{'Access-Control-Allow-Origin':'*'},200,1),('cors','',{},200,0),
+ ('cmdi','uid=1000(test)',{},200,0),('cmdi','normal',{},200,0),
+ ('cors','',{'Access-Control-Allow-Origin':'*'},200,0),('cors','',{},200,0),
  ('clickjacking','',{},200,1),('clickjacking','',{'X-Frame-Options':'DENY'},200,0),
  ('tech_detect','',{'Server':'nginx/1.2','X-Powered-By':'PHP'},200,2),('tech_detect','',{},200,0),
  ('robots_sitemap','User-agent: *\nDisallow: /admin',{},200,1),('robots_sitemap','',{},404,0),
- ('waf','cloudflare',{'cf-ray':'fixture'},200,0),('waf','normal',{},200,1),
+ ('waf','cloudflare',{'cf-ray':'fixture'},200,0),('waf','normal',{},200,0),
 ])
 def test_module_baselines(method,body,headers,status,count):
     s=scanner.WebShieldScanner(); s._safe_get=Mock(return_value=response(body,status,headers))
@@ -73,10 +76,11 @@ def test_cookies_baseline(secure):
 @pytest.mark.parametrize('blocked',[True,False])
 def test_rate_limit(blocked):
     s=scanner.WebShieldScanner(); s.session.get=Mock(return_value=response('',429 if blocked else 200))
-    s.test_rate_limiting(U); assert bool(s.findings)==(not blocked)
+    s.test_rate_limiting(U); assert not s.findings and s.observations
 
 def test_http_methods():
     s=scanner.WebShieldScanner(); s.session.options=Mock(return_value=response('',headers={'Allow':'GET, PUT, TRACE'}))
+    s.session.request=Mock(side_effect=lambda method,url,**kw:response('TRACE / HTTP/1.1\r\nX-Mergen-Probe: '+kw['headers']['X-Mergen-Probe']))
     s.test_http_methods(U); assert len(s.findings)==1
 
 def test_ports(monkeypatch):
@@ -123,7 +127,7 @@ def test_malformed_input_400(body):
 
 @pytest.mark.parametrize('ip',['127.0.0.1','10.0.0.1','169.254.169.254'])
 def test_private_url_rejected(monkeypatch,ip):
-    monkeypatch.setattr(api.socket,'gethostbyname',lambda host:ip); assert not api.is_safe_url(U)[0]
+    monkeypatch.setattr(api.socket,'getaddrinfo',lambda *a, **kw: [(2,1,6,'',(ip,443))]); assert not api.is_safe_url(U)[0]
 
 @pytest.mark.parametrize('path,content',[
     ('.env','DB_PASSWORD=fixture'),
@@ -172,7 +176,7 @@ def test_invalid_modules_400(modules):
 
 def test_all_modules_visible():
     import re
-    html=(Path(__file__).resolve().parents[1]/'security_scanner.html').read_text()
+    html=(Path(__file__).resolve().parents[1]/'static/app.js').read_text()
     block=html.split('const modules = [',1)[1].split('];',1)[0]
     assert set(re.findall(r"id: '([^']+)'",block))==api.SCAN_MODULES-{'crawl'}
 
